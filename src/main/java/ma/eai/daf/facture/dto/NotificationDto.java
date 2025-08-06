@@ -14,7 +14,6 @@ public class NotificationDto {
     private LocalDateTime dateEnvoi;
     private LocalDateTime dateLecture;
     private boolean lue;
-    private String typeNotification;
     private boolean urgence;
 
     // Informations sur la facture liée

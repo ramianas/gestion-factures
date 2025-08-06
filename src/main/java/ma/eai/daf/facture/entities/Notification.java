@@ -6,7 +6,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "daf_notifications")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Notification {
 
     @Id
@@ -36,9 +40,6 @@ public class Notification {
 
     @Column(name = "lue")
     private Boolean lue = false;
-
-    @Column(name = "type_notification", length = 50)
-    private String typeNotification;
 
     @Column(name = "urgence")
     private Boolean urgence = false;

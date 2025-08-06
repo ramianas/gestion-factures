@@ -1,7 +1,9 @@
 package ma.eai.daf.facture.services;
 
+import ma.eai.daf.facture.dto.UserUpdateDto;
 import ma.eai.daf.facture.entities.User;
 import ma.eai.daf.facture.enums.RoleType;
+import ma.eai.daf.facture.mappers.UserMapper;
 import ma.eai.daf.facture.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper; // ✅ Injection du mapper
 
     // ===== CRUD DE BASE =====
 
@@ -35,13 +38,17 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
     public User createUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Un utilisateur avec cet email existe déjà");
+            throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
         }
 
         if (user.getRole() == RoleType.ADMIN) {
-            throw new RuntimeException("Impossible de créer un utilisateur avec le rôle ADMIN");
+            throw new IllegalArgumentException("Impossible de créer un utilisateur avec le rôle ADMIN");
         }
 
         user.setMotDePasse(passwordEncoder.encode(user.getMotDePasse()));
@@ -52,10 +59,10 @@ public class UserService {
 
     public User updateUser(Long id, User userUpdate) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
 
         if ("admin@admin.com".equals(user.getEmail())) {
-            throw new RuntimeException("L'utilisateur admin ne peut pas être modifié");
+            throw new IllegalArgumentException("L'utilisateur admin ne peut pas être modifié");
         }
 
         user.setNom(userUpdate.getNom());
@@ -73,12 +80,34 @@ public class UserService {
         return savedUser;
     }
 
-    public void deleteUser(Long id) {
+    // ✅ NOUVELLE MÉTHODE : Mise à jour avec DTO
+    public User updateUser(Long id, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
 
         if ("admin@admin.com".equals(user.getEmail())) {
-            throw new RuntimeException("L'utilisateur admin ne peut pas être supprimé");
+            throw new IllegalArgumentException("L'utilisateur admin ne peut pas être modifié");
+        }
+
+        // Utilisation du mapper pour la mise à jour
+        userMapper.updateEntityFromDto(user, userUpdateDto);
+
+        // Encoder le nouveau mot de passe si fourni
+        if (userUpdateDto.getNouveauMotDePasse() != null && !userUpdateDto.getNouveauMotDePasse().trim().isEmpty()) {
+            user.setMotDePasse(passwordEncoder.encode(userUpdateDto.getNouveauMotDePasse()));
+        }
+
+        User savedUser = userRepository.save(user);
+        log.info("Utilisateur mis à jour: {} ({})", savedUser.getNomComplet(), savedUser.getEmail());
+        return savedUser;
+    }
+
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
+
+        if ("admin@admin.com".equals(user.getEmail())) {
+            throw new IllegalArgumentException("L'utilisateur admin ne peut pas être supprimé");
         }
 
         // Vérifier qu'il n'y a pas de factures liées
@@ -86,7 +115,7 @@ public class UserService {
                 user.getNombreFacturesValideesN1() > 0 ||
                 user.getNombreFacturesValideesN2() > 0 ||
                 user.getNombreFacturesTraitees() > 0) {
-            throw new RuntimeException("Impossible de supprimer un utilisateur ayant des factures associées");
+            throw new IllegalArgumentException("Impossible de supprimer un utilisateur ayant des factures associées");
         }
 
         userRepository.deleteById(id);

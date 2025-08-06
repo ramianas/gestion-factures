@@ -2,13 +2,17 @@ package ma.eai.daf.facture.controllers;
 
 import ma.eai.daf.facture.dto.FactureCreateDto;
 import ma.eai.daf.facture.dto.FactureUpdateDto;
+import ma.eai.daf.facture.dto.PaiementDto;
 import ma.eai.daf.facture.dto.ValidationDto;
 import ma.eai.daf.facture.entities.Facture;
 import ma.eai.daf.facture.entities.User;
 import ma.eai.daf.facture.enums.StatutFacture;
+import ma.eai.daf.facture.mappers.FactureMapper;
 import ma.eai.daf.facture.services.FactureService;
 import ma.eai.daf.facture.services.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,28 +25,40 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/factures")
 @RequiredArgsConstructor
+@Slf4j
 public class FactureController {
 
     private final FactureService factureService;
     private final UserService userService;
+    private final FactureMapper factureMapper;
 
     // ===== ENDPOINTS POUR U1 (Saisie) =====
 
     @GetMapping("/donnees-reference")
     @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> getDonneesReferenceSaisie() {
-        Map<String, Object> donnees = Map.of(
-                "validateursV1", userService.getValidateursV1().stream()
-                        .map(this::mapUserForSelection)
-                        .toList(),
-                "validateursV2", userService.getValidateursV2().stream()
-                        .map(this::mapUserForSelection)
-                        .toList(),
-                "tresoriers", userService.getTresoriers().stream()
-                        .map(this::mapUserForSelection)
-                        .toList()
-        );
-        return ResponseEntity.ok(donnees);
+        try {
+            Map<String, Object> donnees = Map.of(
+                    "validateursV1", userService.getValidateursV1().stream()
+                            .map(this::mapUserForSelection)
+                            .toList(),
+                    "validateursV2", userService.getValidateursV2().stream()
+                            .map(this::mapUserForSelection)
+                            .toList(),
+                    "tresoriers", userService.getTresoriers().stream()
+                            .map(this::mapUserForSelection)
+                            .toList()
+            );
+
+            log.debug("Données de référence récupérées avec succès");
+            return ResponseEntity.ok(donnees);
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des données de référence", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur lors de la récupération des données de référence")
+            );
+        }
     }
 
     @PostMapping
@@ -53,11 +69,13 @@ public class FactureController {
 
         try {
             Long userId = getCurrentUserId(authentication);
+            log.info("Création d'une nouvelle facture par l'utilisateur {}", userId);
 
-            // Conversion DTO vers entité
-            Facture facture = convertCreateDtoToEntity(factureDto);
-
+            Facture facture = factureMapper.toEntity(factureDto);
             Facture savedFacture = factureService.createFacture(facture, userId);
+
+            log.info("Facture {} créée avec succès par l'utilisateur {}",
+                    savedFacture.getNumero(), userId);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -66,25 +84,81 @@ public class FactureController {
                     "numero", savedFacture.getNumero()
             ));
 
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+        } catch (IllegalArgumentException e) {
+            log.warn("Données invalides pour la création de facture: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
+        } catch (SecurityException e) {
+            log.warn("Tentative d'accès non autorisé pour la création de facture: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(createErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors de la création de la facture", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la création de la facture")
+            );
         }
     }
 
     @GetMapping("/mes-factures")
     @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<List<Map<String, Object>>> getMesFactures(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
-        List<Facture> factures = factureService.getFacturesParCreateur(userId);
+        try {
+            Long userId = getCurrentUserId(authentication);
+            List<Facture> factures = factureService.getFacturesParCreateur(userId);
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures pour l'utilisateur {}", result.size(), userId);
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            log.warn("Utilisateur non trouvé: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(List.of());
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
+    public ResponseEntity<Map<String, Object>> updateFacture(
+            @PathVariable Long id,
+            @Valid @RequestBody FactureUpdateDto factureUpdateDto,
+            Authentication authentication) {
+
+        try {
+            Long userId = getCurrentUserId(authentication);
+            log.info("Mise à jour de la facture {} par l'utilisateur {}", id, userId);
+
+            Facture facture = factureService.getFactureById(id)
+                    .orElseThrow(() -> new RuntimeException("Facture non trouvée"));
+
+            if (!facture.getCreateur().getId().equals(userId)) {
+                log.warn("Tentative de modification non autorisée de la facture {} par l'utilisateur {}", id, userId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        createErrorResponse("Vous ne pouvez modifier que vos propres factures"));
+            }
+
+            factureMapper.updateEntityFromDto(facture, factureUpdateDto);
+            Facture updatedFacture = factureService.updateFacture(id, facture);
+
+            log.info("Facture {} mise à jour avec succès", id);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Facture mise à jour avec succès",
+                    "factureId", updatedFacture.getId()
+            ));
+
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("non trouvée")) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors de la mise à jour de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la mise à jour")
+            );
+        }
     }
 
     @PostMapping("/{id}/soumettre-v1")
@@ -95,18 +169,29 @@ public class FactureController {
 
         try {
             Long userId = getCurrentUserId(authentication);
+            log.info("Soumission de la facture {} pour validation V1 par l'utilisateur {}", id, userId);
+
             factureService.soumettreValidationV1(id, userId);
 
+            log.info("Facture {} soumise pour validation V1 avec succès", id);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Facture soumise pour validation V1"
             ));
 
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            if (e.getMessage().contains("non trouvée")) {
+                return ResponseEntity.notFound().build();
+            }
+            if (e.getMessage().contains("autorisé") || e.getMessage().contains("créateur")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(createErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors de la soumission pour validation V1 de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la soumission")
+            );
         }
     }
 
@@ -115,14 +200,18 @@ public class FactureController {
     @GetMapping("/en-attente-v1")
     @PreAuthorize("hasAuthority('ROLE_V1')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteV1(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
-        List<Facture> factures = factureService.getFacturesEnAttenteV1(userId);
+        try {
+            Long userId = getCurrentUserId(authentication);
+            List<Facture> factures = factureService.getFacturesEnAttenteV1(userId);
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures en attente V1 pour l'utilisateur {}", result.size(), userId);
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures en attente V1", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @PostMapping("/{id}/valider-v1")
@@ -134,18 +223,26 @@ public class FactureController {
 
         try {
             Long userId = getCurrentUserId(authentication);
+            String action = validationDto.isApprouve() ? "validation" : "rejet";
+            log.info("{} de la facture {} par le validateur V1 {}", action, id, userId);
+
             factureService.validerParV1(id, userId, validationDto.getCommentaire(), validationDto.isApprouve());
+
+            String message = validationDto.isApprouve() ? "Facture validée par V1" : "Facture rejetée par V1";
+            log.info("Facture {} {} par V1 avec succès", id, validationDto.isApprouve() ? "validée" : "rejetée");
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", validationDto.isApprouve() ? "Facture validée par V1" : "Facture rejetée par V1"
+                    "message", message
             ));
 
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            return handleValidationException(e, id);
+        } catch (Exception e) {
+            log.error("Erreur lors de la validation V1 de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la validation")
+            );
         }
     }
 
@@ -154,14 +251,18 @@ public class FactureController {
     @GetMapping("/en-attente-v2")
     @PreAuthorize("hasAuthority('ROLE_V2')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteV2(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
-        List<Facture> factures = factureService.getFacturesEnAttenteV2(userId);
+        try {
+            Long userId = getCurrentUserId(authentication);
+            List<Facture> factures = factureService.getFacturesEnAttenteV2(userId);
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures en attente V2 pour l'utilisateur {}", result.size(), userId);
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures en attente V2", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @PostMapping("/{id}/valider-v2")
@@ -173,18 +274,26 @@ public class FactureController {
 
         try {
             Long userId = getCurrentUserId(authentication);
+            String action = validationDto.isApprouve() ? "validation" : "rejet";
+            log.info("{} de la facture {} par le validateur V2 {}", action, id, userId);
+
             factureService.validerParV2(id, userId, validationDto.getCommentaire(), validationDto.isApprouve());
+
+            String message = validationDto.isApprouve() ? "Facture validée par V2" : "Facture rejetée par V2";
+            log.info("Facture {} {} par V2 avec succès", id, validationDto.isApprouve() ? "validée" : "rejetée");
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", validationDto.isApprouve() ? "Facture validée par V2" : "Facture rejetée par V2"
+                    "message", message
             ));
 
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            return handleValidationException(e, id);
+        } catch (Exception e) {
+            log.error("Erreur lors de la validation V2 de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la validation")
+            );
         }
     }
 
@@ -193,40 +302,49 @@ public class FactureController {
     @GetMapping("/en-attente-tresorerie")
     @PreAuthorize("hasAuthority('ROLE_T1')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteTresorerie(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
-        List<Facture> factures = factureService.getFacturesEnAttenteTresorerie(userId);
+        try {
+            Long userId = getCurrentUserId(authentication);
+            List<Facture> factures = factureService.getFacturesEnAttenteTresorerie(userId);
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures en attente trésorerie pour l'utilisateur {}", result.size(), userId);
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures en attente trésorerie", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @PostMapping("/{id}/payer")
     @PreAuthorize("hasAuthority('ROLE_T1')")
     public ResponseEntity<Map<String, Object>> payerFacture(
             @PathVariable Long id,
-            @Valid @RequestBody Map<String, Object> paiementData,
+            @Valid @RequestBody PaiementDto paiementDto,
             Authentication authentication) {
 
         try {
             Long userId = getCurrentUserId(authentication);
-            String referencePaiement = (String) paiementData.get("referencePaiement");
-            String commentaire = (String) paiementData.get("commentaire");
+            log.info("Paiement de la facture {} par le trésorier {}", id, userId);
 
-            factureService.traiterParTresorier(id, userId, referencePaiement, null, commentaire);
+            factureService.traiterParTresorier(id, userId,
+                    paiementDto.getReferencePaiement(),
+                    paiementDto.getDatePaiement(),
+                    paiementDto.getCommentaire());
 
+            log.info("Facture {} payée avec succès - Référence: {}", id, paiementDto.getReferencePaiement());
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Facture payée avec succès"
             ));
 
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            return handleValidationException(e, id);
+        } catch (Exception e) {
+            log.error("Erreur lors du paiement de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors du paiement")
+            );
         }
     }
 
@@ -235,78 +353,152 @@ public class FactureController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> getFactureById(@PathVariable Long id) {
-        return factureService.getFactureById(id)
-                .map(facture -> ResponseEntity.ok(mapFactureToDetailDto(facture)))
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return factureService.getFactureById(id)
+                    .map(facture -> {
+                        log.debug("Récupération des détails de la facture {}", id);
+                        return ResponseEntity.ok(factureMapper.toDetailDto(facture));
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur lors de la récupération de la facture")
+            );
+        }
     }
 
     @GetMapping("/mes-taches")
     @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
     public ResponseEntity<List<Map<String, Object>>> getMesTaches(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
-        List<Facture> factures = factureService.getFacturesEnAttenteForUser(userId);
+        try {
+            Long userId = getCurrentUserId(authentication);
+            List<Facture> factures = factureService.getFacturesEnAttenteForUser(userId);
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} tâches pour l'utilisateur {}", result.size(), userId);
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des tâches", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @GetMapping("/urgentes")
     @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesUrgentes() {
-        List<Facture> factures = factureService.getFacturesUrgentes();
+        try {
+            List<Facture> factures = factureService.getFacturesUrgentes();
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures urgentes", result.size());
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures urgentes", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @GetMapping("/en-retard")
     @PreAuthorize("hasAnyAuthority('ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnRetard() {
-        List<Facture> factures = factureService.getFacturesEnRetard();
+        try {
+            List<Facture> factures = factureService.getFacturesEnRetard();
+            List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-        List<Map<String, Object>> result = factures.stream()
-                .map(this::mapFactureToDto)
-                .toList();
+            log.debug("Récupération de {} factures en retard", result.size());
+            return ResponseEntity.ok(result);
 
-        return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des factures en retard", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
     }
 
     @GetMapping("/tableau-bord")
     @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> getTableauBord(Authentication authentication) {
-        Long userId = getCurrentUserId(authentication);
+        try {
+            Long userId = getCurrentUserId(authentication);
 
-        Map<String, Object> tableau = Map.of(
-                "facturesEnSaisie", factureService.countFacturesParStatut(StatutFacture.SAISIE),
-                "facturesEnValidationV1", factureService.countFacturesParStatut(StatutFacture.EN_VALIDATION_V1),
-                "facturesEnValidationV2", factureService.countFacturesParStatut(StatutFacture.EN_VALIDATION_V2),
-                "facturesEnTresorerie", factureService.countFacturesParStatut(StatutFacture.EN_TRESORERIE),
-                "facturesValidees", factureService.countFacturesParStatut(StatutFacture.VALIDEE),
-                "facturesPayees", factureService.countFacturesParStatut(StatutFacture.PAYEE),
-                "facturesRejetees", factureService.countFacturesParStatut(StatutFacture.REJETEE),
-                "mesTaches", factureService.getFacturesEnAttenteForUser(userId).size(),
-                "facturesUrgentes", factureService.getFacturesUrgentes().size(),
-                "facturesEnRetard", factureService.getFacturesEnRetard().size()
-        );
+            Map<String, Object> tableau = Map.of(
+                    "facturesEnSaisie", factureService.countFacturesParStatut(StatutFacture.SAISIE),
+                    "facturesEnValidationV1", factureService.countFacturesParStatut(StatutFacture.EN_VALIDATION_V1),
+                    "facturesEnValidationV2", factureService.countFacturesParStatut(StatutFacture.EN_VALIDATION_V2),
+                    "facturesEnTresorerie", factureService.countFacturesParStatut(StatutFacture.EN_TRESORERIE),
+                    "facturesValidees", factureService.countFacturesParStatut(StatutFacture.VALIDEE),
+                    "facturesPayees", factureService.countFacturesParStatut(StatutFacture.PAYEE),
+                    "facturesRejetees", factureService.countFacturesParStatut(StatutFacture.REJETEE),
+                    "mesTaches", factureService.getFacturesEnAttenteForUser(userId).size(),
+                    "facturesUrgentes", factureService.getFacturesUrgentes().size(),
+                    "facturesEnRetard", factureService.getFacturesEnRetard().size()
+            );
 
-        return ResponseEntity.ok(tableau);
+            log.debug("Génération du tableau de bord pour l'utilisateur {}", userId);
+            return ResponseEntity.ok(tableau);
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la génération du tableau de bord", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur lors de la génération du tableau de bord")
+            );
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
+    public ResponseEntity<Map<String, Object>> deleteFacture(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        try {
+            Long userId = getCurrentUserId(authentication);
+            log.info("Suppression de la facture {} par l'utilisateur {}", id, userId);
+
+            Facture facture = factureService.getFactureById(id)
+                    .orElseThrow(() -> new RuntimeException("Facture non trouvée"));
+
+            if (!facture.getCreateur().getId().equals(userId)) {
+                log.warn("Tentative de suppression non autorisée de la facture {} par l'utilisateur {}", id, userId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        createErrorResponse("Vous ne pouvez supprimer que vos propres factures"));
+            }
+
+            factureService.deleteFacture(id);
+
+            log.info("Facture {} supprimée avec succès", id);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Facture supprimée avec succès"
+            ));
+
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("non trouvée")) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors de la suppression de la facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur interne lors de la suppression")
+            );
+        }
     }
 
     // ===== MÉTHODES UTILITAIRES =====
 
     private Long getCurrentUserId(Authentication authentication) {
-        // TODO: Implémenter la récupération de l'ID utilisateur depuis l'authentification
-        // Pour l'instant, retourner un ID fictif
-        String email = authentication.getName();
-        return userService.getUserByEmail(email)
-                .map(User::getId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        try {
+            String email = authentication.getName();
+            return userService.getUserByEmail(email)
+                    .map(User::getId)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération de l'utilisateur connecté", e);
+            throw new RuntimeException("Impossible de récupérer les informations de l'utilisateur connecté");
+        }
     }
 
     private Map<String, Object> mapUserForSelection(User user) {
@@ -318,102 +510,21 @@ public class FactureController {
         );
     }
 
-    private Map<String, Object> mapFactureToDto(Facture facture) {
+    private Map<String, Object> createErrorResponse(String message) {
         return Map.of(
-                "id", facture.getId(),
-                "numero", facture.getNumero() != null ? facture.getNumero() : "",
-                "nomFournisseur", facture.getNomFournisseur(),
-                "montantTTC", facture.getMontantTTC() != null ? facture.getMontantTTC() : 0,
-                "dateFacture", facture.getDateFacture() != null ? facture.getDateFacture().toString() : "",
-                "dateEcheance", facture.getDateEcheance() != null ? facture.getDateEcheance().toString() : "",
-                "statut", facture.getStatut().name(),
-                "createurNom", facture.getCreateur().getNomComplet(),
-                "joursAvantEcheance", facture.getJoursAvantEcheance(),
-                "estEnRetard", facture.estEnRetard()
+                "success", false,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
         );
     }
 
-    private Map<String, Object> mapFactureToDetailDto(Facture facture) {
-        Map<String, Object> result = Map.ofe(
-                "id", facture.getId(),
-                "numero", facture.getNumero() != null ? facture.getNumero() : "",
-                "nomFournisseur", facture.getNomFournisseur(),
-                "formeJuridique", facture.getFormeJuridique() != null ? facture.getFormeJuridique().name() : null,
-                "dateFacture", facture.getDateFacture() != null ? facture.getDateFacture().toString() : "",
-                "dateReception", facture.getDateReception() != null ? facture.getDateReception().toString() : "",
-                "dateEcheance", facture.getDateEcheance() != null ? facture.getDateEcheance().toString() : "",
-                "dateLivraison", facture.getDateLivraison() != null ? facture.getDateLivraison().toString() : "",
-                "montantHT", facture.getMontantHT() != null ? facture.getMontantHT() : 0,
-                "tauxTVA", facture.getTauxTVA() != null ? facture.getTauxTVA() : 0,
-                "montantTVA", facture.getMontantTVA() != null ? facture.getMontantTVA() : 0,
-                "montantTTC", facture.getMontantTTC() != null ? facture.getMontantTTC() : 0,
-                "rasTVA", facture.getRasTVA() != null ? facture.getRasTVA() : 0,
-                "modalite", facture.getModalite() != null ? facture.getModalite().name() : null,
-                "refacturable", facture.getRefacturable() != null ? facture.getRefacturable() : false,
-                "designation", facture.getDesignation() != null ? facture.getDesignation() : "",
-                "refCommande", facture.getRefCommande() != null ? facture.getRefCommande() : "",
-                "periode", facture.getPeriode() != null ? facture.getPeriode() : "",
-                "statut", facture.getStatut().name(),
-                "dateCreation", facture.getDateCreation() != null ? facture.getDateCreation().toString() : "",
-                "dateModification", facture.getDateModification() != null ? facture.getDateModification().toString() : "",
-                "commentaires", facture.getCommentaires() != null ? facture.getCommentaires() : "",
-                "createur", facture.getCreateur() != null ? mapUserForSelection(facture.getCreateur()) : null,
-                "validateur1", facture.getValidateur1() != null ? mapUserForSelection(facture.getValidateur1()) : null,
-                "validateur2", facture.getValidateur2() != null ? mapUserForSelection(facture.getValidateur2()) : null,
-                "tresorier", facture.getTresorier() != null ? mapUserForSelection(facture.getTresorier()) : null,
-                "dateValidationV1", facture.getDateValidationV1() != null ? facture.getDateValidationV1().toString() : "",
-                "dateValidationV2", facture.getDateValidationV2() != null ? facture.getDateValidationV2().toString() : "",
-                "referencePaiement", facture.getReferencePaiement() != null ? facture.getReferencePaiement() : "",
-                "datePaiement", facture.getDatePaiement() != null ? facture.getDatePaiement().toString() : "",
-                "joursAvantEcheance", facture.getJoursAvantEcheance(),
-                "estEnRetard", facture.estEnRetard(),
-                "peutEtreModifiee", facture.peutEtreModifiee(),
-                "peutEtreValideeParV1", facture.peutEtreValideeParV1(),
-                "peutEtreValideeParV2", facture.peutEtreValideeParV2(),
-                "peutEtreTraiteeParTresorier", facture.peutEtreTraiteeParTresorier()
-        );
-
-        return result;
-    }
-
-    private Facture convertCreateDtoToEntity(FactureCreateDto dto) {
-        Facture facture = new Facture();
-
-        facture.setNomFournisseur(dto.getNomFournisseur());
-        facture.setFormeJuridique(dto.getFormeJuridique());
-        facture.setDateFacture(dto.getDateFacture());
-        facture.setDateReception(dto.getDateReception());
-        facture.setDateLivraison(dto.getDateLivraison());
-        facture.setMontantHT(dto.getMontantHT());
-        facture.setTauxTVA(dto.getTauxTVA());
-        facture.setRasTVA(dto.getRasTVA());
-        facture.setModalite(dto.getModalite());
-        facture.setRefacturable(dto.getRefacturable());
-        facture.setDesignation(dto.getDesignation());
-        facture.setRefCommande(dto.getRefCommande());
-        facture.setPeriode(dto.getPeriode());
-        facture.setNumero(dto.getNumero());
-        facture.setCommentaires(dto.getCommentaires());
-
-        // Assignation des validateurs
-        if (dto.getValidateur1Id() != null) {
-            User validateur1 = userService.getUserById(dto.getValidateur1Id())
-                    .orElseThrow(() -> new RuntimeException("Validateur V1 non trouvé"));
-            facture.setValidateur1(validateur1);
+    private ResponseEntity<Map<String, Object>> handleValidationException(RuntimeException e, Long factureId) {
+        if (e.getMessage().contains("non trouvée")) {
+            return ResponseEntity.notFound().build();
         }
-
-        if (dto.getValidateur2Id() != null) {
-            User validateur2 = userService.getUserById(dto.getValidateur2Id())
-                    .orElseThrow(() -> new RuntimeException("Validateur V2 non trouvé"));
-            facture.setValidateur2(validateur2);
+        if (e.getMessage().contains("autorisé") || e.getMessage().contains("assigné") || e.getMessage().contains("validateur")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(createErrorResponse(e.getMessage()));
         }
-
-        if (dto.getTresorierIdId() != null) {
-            User tresorier = userService.getUserById(dto.getTresorierIdId())
-                    .orElseThrow(() -> new RuntimeException("Trésorier non trouvé"));
-            facture.setTresorier(tresorier);
-        }
-
-        return facture;
+        return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
     }
 }

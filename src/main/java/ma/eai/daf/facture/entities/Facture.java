@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor @Builder
+@AllArgsConstructor
+@Builder
 public class Facture {
 
     @Id
@@ -225,44 +226,48 @@ public class Facture {
         return dateEcheance != null && LocalDate.now().isAfter(dateEcheance) && !estPayee();
     }
 
-    // Méthodes pour maintenir la cohérence bidirectionnelle
     public void setCreateur(User createur) {
+        // Retirer l'ancienne association
         if (this.createur != null) {
-            this.createur.getFacturesCreees().remove(this);
+            this.createur.removeFactureCreee(this); // ✅ Utilise la méthode utilitaire
         }
+
+        // Définir le nouveau créateur
         this.createur = createur;
+
+        // Ajouter la nouvelle association
         if (createur != null) {
-            createur.getFacturesCreees().add(this);
+            createur.addFactureCreee(this); // ✅ Utilise la méthode utilitaire
         }
     }
 
     public void setValidateur1(User validateur1) {
         if (this.validateur1 != null) {
-            this.validateur1.getFacturesValideesN1().remove(this);
+            this.validateur1.removeFactureValideeN1(this);
         }
         this.validateur1 = validateur1;
         if (validateur1 != null) {
-            validateur1.getFacturesValideesN1().add(this);
+            validateur1.addFactureValideeN1(this);
         }
     }
 
     public void setValidateur2(User validateur2) {
         if (this.validateur2 != null) {
-            this.validateur2.getFacturesValideesN2().remove(this);
+            this.validateur2.removeFactureValideeN2(this);
         }
         this.validateur2 = validateur2;
         if (validateur2 != null) {
-            validateur2.getFacturesValideesN2().add(this);
+            validateur2.addFactureValideeN2(this);
         }
     }
 
     public void setTresorier(User tresorier) {
         if (this.tresorier != null) {
-            this.tresorier.getFacturesTraitees().remove(this);
+            this.tresorier.removeFactureTraitee(this);
         }
         this.tresorier = tresorier;
         if (tresorier != null) {
-            tresorier.getFacturesTraitees().add(this);
+            tresorier.addFactureTraitee(this);
         }
     }
 

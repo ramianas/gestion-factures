@@ -35,9 +35,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByFactureIdOrderByDateEnvoiDesc(Long factureId);
 
-    // Recherche par type
-    List<Notification> findByTypeNotificationOrderByDateEnvoiDesc(String typeNotification);
-
     // Notifications urgentes
     @Query("SELECT n FROM Notification n WHERE n.urgence = true AND n.lue = false ORDER BY n.dateEnvoi DESC")
     List<Notification> findNotificationsUrgentesNonLues();

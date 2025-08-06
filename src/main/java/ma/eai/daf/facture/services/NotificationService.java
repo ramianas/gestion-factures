@@ -28,7 +28,7 @@ public class NotificationService {
         String message = String.format("La facture %s de %s (montant: %.2f€) est prête pour votre validation niveau 1.",
                 facture.getNumero(), facture.getNomFournisseur(), facture.getMontantTTC());
 
-        createNotification(facture.getValidateur1(), facture, titre, message, "VALIDATION_V1", false);
+        createNotification(facture.getValidateur1(), facture, titre, message, false);
         log.info("Notification V1 envoyée à {} pour facture {}",
                 facture.getValidateur1().getNomComplet(), facture.getNumero());
     }
@@ -40,7 +40,7 @@ public class NotificationService {
         String message = String.format("La facture %s de %s (montant: %.2f€) a été validée par V1 et est prête pour votre validation niveau 2.",
                 facture.getNumero(), facture.getNomFournisseur(), facture.getMontantTTC());
 
-        createNotification(facture.getValidateur2(), facture, titre, message, "VALIDATION_V2", false);
+        createNotification(facture.getValidateur2(), facture, titre, message, false);
         log.info("Notification V2 envoyée à {} pour facture {}",
                 facture.getValidateur2().getNomComplet(), facture.getNumero());
     }
@@ -54,7 +54,7 @@ public class NotificationService {
                 facture.getDateEcheance() != null ? facture.getDateEcheance().toString() : "Non définie");
 
         boolean urgente = facture.getJoursAvantEcheance() <= 7;
-        createNotification(facture.getTresorier(), facture, titre, message, "TRESORERIE", urgente);
+        createNotification(facture.getTresorier(), facture, titre, message, urgente);
         log.info("Notification trésorerie envoyée à {} pour facture {}",
                 facture.getTresorier().getNomComplet(), facture.getNumero());
     }
@@ -64,7 +64,7 @@ public class NotificationService {
         String message = String.format("Votre facture %s de %s a été rejetée par le validateur %s. Motif: %s",
                 facture.getNumero(), facture.getNomFournisseur(), niveauRejet, motif);
 
-        createNotification(facture.getCreateur(), facture, titre, message, "REJET", true);
+        createNotification(facture.getCreateur(), facture, titre, message, true);
         log.info("Notification rejet {} envoyée à {} pour facture {}",
                 niveauRejet, facture.getCreateur().getNomComplet(), facture.getNumero());
     }
@@ -76,14 +76,14 @@ public class NotificationService {
                 facture.getDatePaiement().toString(), facture.getReferencePaiement());
 
         // Notifier le créateur
-        createNotification(facture.getCreateur(), facture, titre, message, "PAIEMENT", false);
+        createNotification(facture.getCreateur(), facture, titre, message, false);
 
         // Notifier les validateurs
         if (facture.getValidateur1() != null) {
-            createNotification(facture.getValidateur1(), facture, titre, message, "PAIEMENT", false);
+            createNotification(facture.getValidateur1(), facture, titre, message, false);
         }
         if (facture.getValidateur2() != null) {
-            createNotification(facture.getValidateur2(), facture, titre, message, "PAIEMENT", false);
+            createNotification(facture.getValidateur2(), facture, titre, message, false);
         }
 
         log.info("Notifications paiement envoyées pour facture {}", facture.getNumero());
@@ -98,7 +98,7 @@ public class NotificationService {
                 facture.getNumero(), facture.getNomFournisseur(), facture.getMontantTTC(),
                 joursRestants, facture.getDateEcheance().toString());
 
-        createNotification(facture.getTresorier(), facture, titre, message, "ECHEANCE_PROCHE", true);
+        createNotification(facture.getTresorier(), facture, titre, message, true);
         log.info("Notification échéance proche envoyée pour facture {}", facture.getNumero());
     }
 
@@ -135,13 +135,12 @@ public class NotificationService {
     // ===== MÉTHODES PRIVÉES =====
 
     private void createNotification(User destinataire, Facture facture, String titre,
-                                    String message, String typeNotification, boolean urgente) {
+                                    String message, boolean urgente) {
         Notification notification = Notification.builder()
                 .destinataire(destinataire)
                 .facture(facture)
                 .titre(titre)
                 .message(message)
-                .typeNotification(typeNotification)
                 .urgence(urgente)
                 .lue(false)
                 .build();

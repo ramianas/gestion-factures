@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: facture-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/facturedb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      MAIL_HOST: maildev
+      MAIL_PORT: 1025
+    depends_on:
+      - db
+      - maildev
+    networks:
+      - facture-network
+
+  frontend:
+    build:
+      context: ./facture-front
+    container_name: facture-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - facture-network
+
+  db:
+    image: postgres:16
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: facturedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - facture-network
+
+  maildev:
+    image: maildev/maildev
+    container_name: maildev
+    ports:
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - facture-network
+
+volumes:
+  postgres_data:
+
+networks:
+  facture-network:
+    driver: bridge

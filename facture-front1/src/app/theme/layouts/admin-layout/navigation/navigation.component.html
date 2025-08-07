@@ -2,7 +2,21 @@
   <div class="navbar-wrapper">
     <div class="m-header">
       <a href="javascript:" class="b-brand">
-        <img src="assets/images/logo-dark.svg" alt="theme-logo" class="logo logo-dark logo-lg" />
+        <!-- ✅ CHANGEMENT: Logo personnalisé pour FactureApp -->
+        <div class="brand-container-nav">
+          <!-- Icône de facture SVG personnalisée -->
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-icon-nav">
+            <rect x="4" y="2" width="24" height="28" rx="2" fill="#1677FF" opacity="0.1"/>
+            <rect x="4" y="2" width="24" height="28" rx="2" stroke="#1677FF" stroke-width="2"/>
+            <line x1="8" y1="8" x2="24" y2="8" stroke="#1677FF" stroke-width="2"/>
+            <line x1="8" y1="12" x2="20" y2="12" stroke="#1677FF" stroke-width="1.5"/>
+            <line x1="8" y1="16" x2="22" y2="16" stroke="#1677FF" stroke-width="1.5"/>
+            <line x1="8" y1="20" x2="18" y2="20" stroke="#1677FF" stroke-width="1.5"/>
+            <circle cx="20" cy="24" r="2" fill="#52C41A"/>
+            <path d="M19 24L20 25L22 22.5" stroke="white" stroke-width="1.2" fill="none"/>
+          </svg>
+          <span class="brand-text-nav">FactureApp</span>
+        </div>
       </a>
     </div>
     <app-nav-content (NavCollapsedMob)="navCollapseMob()" class="scroll-div w-100 compact"></app-nav-content>

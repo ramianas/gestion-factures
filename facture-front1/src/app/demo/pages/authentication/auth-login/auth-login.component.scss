@@ -42,30 +42,48 @@
 
       .auth-form {
         flex-direction: column;
-        background: url('../../../../../assets/images/authentication/img-auth-bg.svg');
+        // ✅ CHANGEMENT: Arrière-plan personnalisé pour l'application de gestion de factures
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%);
         min-height: 100vh;
         padding: 24px;
-        background-repeat: no-repeat;
-        background-size: auto 82%;
-        background-position: left bottom;
         position: relative;
         justify-content: space-between;
-        > * {
-          position: relative;
-          z-index: 5;
-        }
-        &:after {
+
+        // Motif d'arrière-plan avec des icônes de factures
+        &:before {
           content: '';
           position: absolute;
           top: 0;
           left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba($white, 0.2);
-          backdrop-filter: blur(16px);
+          right: 0;
+          bottom: 0;
+          background-image:
+            radial-gradient(circle at 20% 20%, rgba(22, 119, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(82, 196, 26, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(250, 173, 20, 0.1) 0%, transparent 50%);
+          z-index: 1;
+        }
+
+        // Ajout d'icônes de factures en arrière-plan
+        &:after {
+          content: '';
+          position: absolute;
+          top: 10%;
+          right: 10%;
+          width: 60px;
+          height: 80px;
+          background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA2MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iNSIgeT0iNSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjcwIiByeD0iNCIgZmlsbD0iIzE2NzdGRiIgb3BhY2l0eT0iMC4wNSIvPgo8cmVjdCB4PSI1IiB5PSI1IiB3aWR0aD0iNTAiIGhlaWdodD0iNzAiIHJ4PSI0IiBzdHJva2U9IiMxNjc3RkYiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4yIi8+CjxsaW5lIHgxPSIxMCIgeTE9IjE1IiB4Mj0iNTAiIHkyPSIxNSIgc3Ryb2tlPSIjMTY3N0ZGIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuMyIvPgo8bGluZSB4MT0iMTAiIHkxPSIyNSIgeDI9IjQ1IiB5Mj0iMjUiIHN0cm9rZT0iIzE2NzdGRiIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjMiLz4KPGxpbmUgeDE9IjEwIiB5MT0iMzUiIHgyPSI0MCIgeTI9IjM1IiBzdHJva2U9IiMxNjc3RkYiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4zIi8+Cjwvc3ZnPgo=') no-repeat;
+          opacity: 0.3;
+          z-index: 1;
+        }
+
+        > * {
+          position: relative;
+          z-index: 5;
         }
       }
     }
+
     .auth-form {
       display: flex;
       align-items: center;
@@ -75,7 +93,11 @@
       .card {
         width: 100%;
         max-width: 495px;
-        box-shadow: none;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        border: none;
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
       }
 
       img + span {
@@ -88,6 +110,7 @@
         }
       }
     }
+
     .auth-footer,
     .auth-header {
       width: 100%;
@@ -95,6 +118,88 @@
       align-items: center;
       justify-content: space-between;
     }
+  }
+}
+
+// ✅ NOUVEAU: Styles pour le logo et le nom de l'application
+.brand-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .logo-icon {
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1677FF;
+    letter-spacing: -0.02em;
+  }
+}
+
+// Styles pour les champs de formulaire
+.form-control {
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+
+  &:focus {
+    border-color: #1677FF;
+    box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+    outline: none;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #1677FF 0%, #096DD9 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #096DD9 0%, #0050B3 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+  }
+}
+
+.card {
+  .card-body {
+    padding: 2rem;
+  }
+
+  h3 {
+    color: #262626;
+    font-weight: 700;
+  }
+}
+
+.link-primary {
+  color: #1677FF;
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover {
+    color: #096DD9;
+    text-decoration: underline;
   }
 }
 

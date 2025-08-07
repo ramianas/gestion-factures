@@ -1,20 +1,21 @@
 {
-  "name": "mantis-free-angular-admin-template",
-  "version": "5.2.0",
-  "author": "CodedThemes",
-  "license": "MIT",
+  "name": "boa-gestion-factures-angular",
+  "version": "1.0.0",
+  "author": "Bank of Africa - Direction des Affaires Financières",
+  "license": "Proprietary",
+  "description": "Application de gestion des factures - Bank of Africa",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "build-prod": "ng build --configuration production --base-href /angular/free/",
+    "build-prod": "ng build --configuration production --base-href /boa-factures/",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "prettier": "prettier --write ./src"
   },
-  "private": false,
+  "private": true,
   "dependencies": {
     "@angular/animations": "20.0.5",
     "@angular/cdk": "20.0.4",

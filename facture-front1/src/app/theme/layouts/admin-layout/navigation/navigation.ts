@@ -1,3 +1,6 @@
+// Fichier: src/app/theme/layouts/admin-layout/navigation/navigation.ts
+// Remplacez le contenu de NavigationItems par ceci :
+
 export interface NavigationItem {
   id: string;
   title: string;
@@ -21,13 +24,13 @@ export interface NavigationItem {
 export const NavigationItems: NavigationItem[] = [
   {
     id: 'dashboard',
-    title: 'Dashboard',
+    title: 'Tableau de bord',
     type: 'group',
     icon: 'icon-navigation',
     children: [
       {
         id: 'default',
-        title: 'Default',
+        title: 'Accueil',
         type: 'item',
         classes: 'nav-item',
         url: '/dashboard/default',
@@ -36,15 +39,52 @@ export const NavigationItems: NavigationItem[] = [
       }
     ]
   },
+  // ===== 🆕 SECTION GESTION FACTURES =====
+  {
+    id: 'factures',
+    title: 'Gestion des Factures',
+    type: 'group',
+    icon: 'icon-navigation',
+    children: [
+      {
+        id: 'facture-create',
+        title: 'Nouvelle Facture',
+        type: 'item',
+        classes: 'nav-item',
+        url: '/factures/create',
+        icon: 'plus',
+        breadcrumbs: false
+      },
+      {
+        id: 'facture-list',
+        title: 'Mes Factures',
+        type: 'item',
+        classes: 'nav-item',
+        url: '/factures/list',
+        icon: 'receipt',
+        breadcrumbs: false
+      },
+      {
+        id: 'facture-validation',
+        title: 'À Valider',
+        type: 'item',
+        classes: 'nav-item',
+        url: '/factures/validation',
+        icon: 'check',
+        breadcrumbs: false
+      }
+    ]
+  },
+  // ===== SECTION AUTHENTIFICATION =====
   {
     id: 'authentication',
-    title: 'Authentication',
+    title: 'Authentification',
     type: 'group',
     icon: 'icon-navigation',
     children: [
       {
         id: 'login',
-        title: 'Login',
+        title: 'Connexion',
         type: 'item',
         classes: 'nav-item',
         url: '/login',
@@ -54,7 +94,7 @@ export const NavigationItems: NavigationItem[] = [
       },
       {
         id: 'register',
-        title: 'Register',
+        title: 'Inscription',
         type: 'item',
         classes: 'nav-item',
         url: '/register',
@@ -64,15 +104,16 @@ export const NavigationItems: NavigationItem[] = [
       }
     ]
   },
+  // ===== SECTION COMPOSANTS UI =====
   {
     id: 'utilities',
-    title: 'UI Components',
+    title: 'Composants UI',
     type: 'group',
     icon: 'icon-navigation',
     children: [
       {
         id: 'typography',
-        title: 'Typography',
+        title: 'Typographie',
         type: 'item',
         classes: 'nav-item',
         url: '/typography',
@@ -80,7 +121,7 @@ export const NavigationItems: NavigationItem[] = [
       },
       {
         id: 'color',
-        title: 'Colors',
+        title: 'Couleurs',
         type: 'item',
         classes: 'nav-item',
         url: '/color',
@@ -88,7 +129,7 @@ export const NavigationItems: NavigationItem[] = [
       },
       {
         id: 'ant-icons',
-        title: 'Ant Icons',
+        title: 'Icônes',
         type: 'item',
         classes: 'nav-item',
         url: 'https://ant.design/components/icon',
@@ -98,16 +139,16 @@ export const NavigationItems: NavigationItem[] = [
       }
     ]
   },
-
+  // ===== SECTION AUTRES =====
   {
     id: 'other',
-    title: 'Other',
+    title: 'Autres',
     type: 'group',
     icon: 'icon-navigation',
     children: [
       {
         id: 'sample-page',
-        title: 'Sample Page',
+        title: 'Page Exemple',
         type: 'item',
         url: '/sample-page',
         classes: 'nav-item',
@@ -115,7 +156,7 @@ export const NavigationItems: NavigationItem[] = [
       },
       {
         id: 'document',
-        title: 'Document',
+        title: 'Documentation',
         type: 'item',
         classes: 'nav-item',
         url: 'https://codedthemes.gitbook.io/mantis-angular/',

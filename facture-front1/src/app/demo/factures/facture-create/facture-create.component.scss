@@ -1,0 +1,576 @@
+// Fichier: facture-front1/src/app/demo/factures/facture-create/facture-create.component.scss
+
+// === Variables ===
+$primary-color: #1677FF;
+$primary-light: #E6F3FF;
+$success-color: #52C41A;
+$warning-color: #FAAD14;
+$danger-color: #FF4D4F;
+$text-primary: #262626;
+$text-secondary: #8C8C8C;
+$border-color: #D9D9D9;
+$background-light: #FAFAFA;
+
+// === Container Principal ===
+.facture-create-container {
+  min-height: 100vh;
+  background-color: $background-light;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
+}
+
+// === Loading State ===
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  .loading-spinner {
+    text-align: center;
+
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      color: $primary-color;
+    }
+
+    p {
+      color: $text-secondary;
+      margin-top: 16px;
+      font-weight: 500;
+    }
+  }
+}
+
+// === Page Header ===
+.page-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F0F0F0;
+
+  .page-title {
+    color: $text-primary;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+
+    i {
+      color: $primary-color;
+    }
+  }
+
+  .page-subtitle {
+    color: $text-secondary;
+    margin: 8px 0 0 0;
+    font-size: 14px;
+  }
+
+  .header-actions {
+    .btn {
+      border-radius: 8px;
+      font-weight: 500;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+
+    .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 16px;
+    }
+
+    .header-actions {
+      width: 100%;
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// === Form Sections ===
+.form-section {
+  margin-bottom: 24px;
+
+  ::ng-deep .card {
+    border: 1px solid #F0F0F0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+
+    .card-header {
+      background: white;
+      border-bottom: 1px solid #F0F0F0;
+      padding: 20px 24px;
+
+      h5 {
+        color: $text-primary;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    ::ng-deep .card {
+      .card-header {
+        padding: 16px;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+    }
+  }
+}
+
+// === Form Controls ===
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  color: $text-primary;
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  display: block;
+
+  &.required::after {
+    content: ' *';
+    color: $danger-color;
+    font-weight: bold;
+  }
+}
+
+.form-control,
+.form-select {
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: white;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+    outline: none;
+  }
+
+  &:hover:not(:focus) {
+    border-color: lighten($primary-color, 20%);
+  }
+
+  &.is-invalid {
+    border-color: $danger-color;
+
+    &:focus {
+      border-color: $danger-color;
+      box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.1);
+    }
+  }
+
+  &::placeholder {
+    color: $text-secondary;
+    font-style: italic;
+  }
+}
+
+// === Input Groups ===
+.input-group {
+  .input-group-text {
+    background: $primary-light;
+    border: 1px solid $primary-color;
+    color: $primary-color;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .form-control {
+    &:focus {
+      z-index: 5;
+    }
+  }
+}
+
+// === Invalid Feedback ===
+.invalid-feedback {
+  display: block !important;
+  color: $danger-color;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+
+  div {
+    margin-bottom: 2px;
+  }
+}
+
+// === Récapitulatif Montants ===
+.montant-summary {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #F0F0F0;
+
+  .summary-card {
+    background: linear-gradient(135deg, $primary-light 0%, #F0F9FF 100%);
+    border: 1px solid $primary-color;
+    border-radius: 12px;
+    padding: 20px;
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &.total {
+        font-size: 16px;
+        font-weight: 600;
+        padding-top: 12px;
+        border-top: 1px solid $primary-color;
+      }
+
+      .summary-label {
+        color: $text-primary;
+      }
+
+      .summary-value {
+        color: $primary-color;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// === Informations Échéance ===
+.echeance-info {
+  margin-top: 20px;
+
+  .alert {
+    border-radius: 8px;
+    border: 1px solid;
+    padding: 16px;
+
+    &.alert-success {
+      background-color: #F6FFED;
+      border-color: $success-color;
+      color: $success-color;
+    }
+
+    &.alert-warning {
+      background-color: #FFFBE6;
+      border-color: $warning-color;
+      color: $warning-color;
+    }
+
+    &.alert-danger {
+      background-color: #FFF2F0;
+      border-color: $danger-color;
+      color: $danger-color;
+    }
+
+    .fas {
+      color: inherit;
+    }
+  }
+}
+
+// === User Info Cards ===
+.user-info {
+  margin-top: 12px;
+
+  .user-card {
+    background: #F8F9FA;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: #F0F2F5;
+      border-color: $primary-color;
+    }
+
+    .fas {
+      font-size: 16px;
+    }
+
+    strong {
+      color: $text-primary;
+      font-size: 14px;
+    }
+
+    small {
+      color: $text-secondary;
+      font-size: 12px;
+    }
+  }
+}
+
+// === Form Check (Checkbox) ===
+.form-check {
+  margin-top: 16px;
+
+  .form-check-input {
+    &:checked {
+      background-color: $primary-color;
+      border-color: $primary-color;
+    }
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 0.2rem rgba(22, 119, 255, 0.25);
+    }
+  }
+
+  .form-check-label {
+    color: $text-primary;
+    font-weight: 500;
+    cursor: pointer;
+  }
+}
+
+// === Action Buttons ===
+.action-buttons {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F0F0F0;
+  margin-top: 32px;
+  position: sticky;
+  bottom: 20px;
+  z-index: 100;
+
+  .btn {
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border: none;
+    min-width: 140px;
+
+    &.btn-primary {
+      background: linear-gradient(135deg, $primary-color 0%, #096DD9 100%);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #096DD9 0%, #0050B3 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+      }
+
+      &:disabled {
+        background: #D9D9D9;
+        color: #8C8C8C;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+    }
+
+    &.btn-outline-primary {
+      border: 1px solid $primary-color;
+      color: $primary-color;
+      background: white;
+
+      &:hover:not(:disabled) {
+        background: $primary-color;
+        color: white;
+      }
+
+      &:disabled {
+        border-color: #D9D9D9;
+        color: #8C8C8C;
+        cursor: not-allowed;
+      }
+    }
+
+    &.btn-outline-secondary {
+      border: 1px solid $border-color;
+      color: $text-secondary;
+      background: white;
+
+      &:hover:not(:disabled) {
+        background: $background-light;
+        border-color: $text-secondary;
+        color: $text-primary;
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .fas {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    position: static;
+    margin-top: 24px;
+
+    .d-flex {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      width: 100%;
+      min-width: auto;
+    }
+  }
+}
+
+// === Text Utilities ===
+.text-success {
+  color: $success-color !important;
+}
+
+.text-warning {
+  color: $warning-color !important;
+}
+
+.text-danger {
+  color: $danger-color !important;
+}
+
+// === Responsive Design ===
+@media (max-width: 768px) {
+  .facture-create-container {
+    .row {
+      .col-md-4,
+      .col-md-6,
+      .col-md-8,
+      .col-md-12 {
+        margin-bottom: 16px;
+      }
+    }
+
+    .montant-summary {
+      .col-md-6.offset-md-6 {
+        margin-left: 0 !important;
+      }
+    }
+  }
+}
+
+// === Angular Material Compatibility ===
+::ng-deep {
+  // S'assurer que les composants Angular fonctionnent bien
+  .mat-form-field {
+    width: 100%;
+  }
+
+  // Style pour les alertes Bootstrap dans Angular
+  .alert {
+    .d-flex {
+      align-items: center;
+    }
+  }
+}
+
+// === Animation pour les transitions ===
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-section {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.user-info {
+  animation: fadeIn 0.3s ease-out;
+}
+
+// === States spéciaux ===
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+
+  .loading-content {
+    background: white;
+    padding: 32px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      color: $primary-color;
+    }
+
+    p {
+      margin-top: 16px;
+      color: $text-primary;
+      font-weight: 500;
+    }
+  }
+}
+
+// === Print Styles ===
+@media print {
+  .action-buttons,
+  .page-header .header-actions {
+    display: none !important;
+  }
+
+  .form-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

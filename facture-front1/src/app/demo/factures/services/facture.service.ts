@@ -34,7 +34,7 @@ export class FactureService {
     validateursV2: User[],
     tresoriers: User[]
   }> {
-    // return this.http.get<any>(`${this.apiUrl}/donnees-reference`);
+    // return this.http.get<{validateursV1: User[], validateursV2: User[], tresoriers: User[]}>(`${this.apiUrl}/donnees-reference`);
 
     // Pour l'instant, simulation avec données mockées
     return this.simulateGetDonneesReference();
@@ -89,7 +89,7 @@ export class FactureService {
           role: 'V1',
           actif: true
         }
-      ],
+      ] as User[],
       validateursV2: [
         {
           id: 4,
@@ -118,7 +118,7 @@ export class FactureService {
           role: 'V2',
           actif: true
         }
-      ],
+      ] as User[],
       tresoriers: [
         {
           id: 7,
@@ -138,7 +138,7 @@ export class FactureService {
           role: 'T1',
           actif: true
         }
-      ]
+      ] as User[]
     };
 
     return of(donneesReference).pipe(delay(800)); // Simulation délai réseau

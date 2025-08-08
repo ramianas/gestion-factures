@@ -29,14 +29,15 @@ export enum StatutFacture {
   PAYEE = 'PAYEE'
 }
 
+// ✅ CORRECTION: Interface User avec propriétés optionnelles
 export interface User {
   id: number;
-  nom: string;
-  prenom?: string;
+  nom?: string;          // ✅ Rendu optionnel
+  prenom?: string;       // ✅ Déjà optionnel
   email: string;
   nomComplet: string;
-  role: string;
-  actif: boolean;
+  role?: string;         // ✅ Rendu optionnel
+  actif?: boolean;       // ✅ Rendu optionnel
 }
 
 export interface FactureCreateDto {

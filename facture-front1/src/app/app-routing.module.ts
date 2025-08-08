@@ -1,3 +1,5 @@
+// Fichier: facture-front1/src/app/app-routing.module.ts
+
 // angular import
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
@@ -20,6 +22,20 @@ const routes: Routes = [
         path: 'dashboard/default',
         loadComponent: () => import('./demo/dashboard/default/default.component').then((c) => c.DefaultComponent)
       },
+      // ===== ROUTES FACTURES =====
+      {
+        path: 'factures/create',
+        loadComponent: () => import('./demo/factures/facture-create/facture-create.component').then((c) => c.FactureCreateComponent)
+      },
+      {
+        path: 'factures/list',
+        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent) // À remplacer par le vrai composant
+      },
+      {
+        path: 'factures/validation',
+        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent) // À remplacer par le vrai composant
+      },
+      // ===== ROUTES COMPOSANTS =====
       {
         path: 'typography',
         loadComponent: () => import('./demo/component/basic-component/typography/typography.component').then((c) => c.TypographyComponent)

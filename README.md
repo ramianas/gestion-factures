@@ -5,7 +5,7 @@ Une application complète de gestion de factures multi-utilisateurs avec workflo
 ## 🚀 Technologies utilisées
 
 - **Back-end** : Java 17, Spring Boot, JPA, PostgreSQL
-- **Front-end** : Angular 16 (facture-front)
+- **Front-end** : Angular  (facture-front)
 - **Base de données** : PostgreSQL
 - **Docker** : docker-compose pour le backend et le mail
 - **Architecture** : RESTful API, couche service, DTOs, sécurité

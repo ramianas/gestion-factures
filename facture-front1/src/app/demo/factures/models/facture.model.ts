@@ -29,15 +29,15 @@ export enum StatutFacture {
   PAYEE = 'PAYEE'
 }
 
-// ✅ CORRECTION: Interface User avec propriétés optionnelles
+// ✅ CORRIGÉ: Interface User mise à jour
 export interface User {
   id: number;
-  nom?: string;          // ✅ Rendu optionnel
-  prenom?: string;       // ✅ Déjà optionnel
+  nom?: string;           // Optionnel car parfois on a directement nomComplet
+  prenom?: string;        // Optionnel
   email: string;
-  nomComplet: string;
-  role?: string;         // ✅ Rendu optionnel
-  actif?: boolean;       // ✅ Rendu optionnel
+  nomComplet: string;     // Obligatoire - c'est ce qu'on utilise dans les templates
+  role?: string;          // Optionnel
+  actif?: boolean;        // Optionnel
 }
 
 export interface FactureCreateDto {
@@ -49,6 +49,8 @@ export interface FactureCreateDto {
   dateFacture: string; // Format ISO date
   dateReception?: string;
   dateLivraison?: string;
+  etrangerLocal?: string;
+  pieceJointe?: File;
 
   // Montants
   montantHT: number;

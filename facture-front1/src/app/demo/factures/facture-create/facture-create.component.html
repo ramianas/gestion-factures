@@ -1,26 +1,21 @@
-<!-- Ajoutez cette section dans votre template HTML juste après la div loading-container -->
-<app-card cardTitle="Création Facture" [showContent]="true">
-  <p>Contenu test de la carte</p>
-</app-card>
-
 <div class="facture-create-container">
-  <!-- Loading State -->
+  <!-- État de chargement -->
   <div *ngIf="isLoading" class="loading-container">
     <div class="loading-spinner">
       <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Chargement...</span>
+        <span class="visually-hidden">Chargement…</span>
       </div>
-      <p class="mt-3">Chargement des données...</p>
+      <p class="mt-3">Chargement des données…</p>
     </div>
   </div>
 
-  <!-- ✅ AJOUT: Error State (Optionnel - pour informer l'utilisateur) -->
+  <!-- Message en cas d’erreur lors du chargement -->
   <div *ngIf="hasError && !isLoading" class="alert alert-warning alert-dismissible mb-4" role="alert">
     <div class="d-flex align-items-center">
       <i class="fas fa-exclamation-triangle me-3"></i>
       <div class="flex-grow-1">
-        <strong>Information :</strong> {{ errorMessage }}
-        <br>
+        <strong>Information :</strong> {{ errorMessage }}
+        <br />
         <small>Le formulaire fonctionne avec des données par défaut.</small>
       </div>
       <button type="button" class="btn btn-sm btn-outline-warning ms-2" (click)="retryLoadDonnees()">
@@ -30,32 +25,89 @@
     </div>
   </div>
 
-  <!-- ✅ MODIFICATION: Main Content s'affiche maintenant même en cas d'erreur -->
+  <!-- Contenu principal : s’affiche une fois le chargement terminé -->
   <div *ngIf="!isLoading" class="main-content">
-
-    <!-- ✅ AJOUT: Bouton de debug (à supprimer en production) -->
+    <!-- Panneau de debug (facultatif) -->
     <div class="debug-panel mb-3" style="background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px dashed #dee2e6;">
       <small class="text-muted">
-        <strong>Debug:</strong>
-        V1: {{ validateursV1.length }},
-        V2: {{ validateursV2.length }},
-        Trésoriers: {{ tresoriers.length }}
+        <strong>Debug :</strong>
+        V1 : {{ validateursV1.length }},
+        V2 : {{ validateursV2.length }},
+        Trésoriers : {{ tresoriers.length }}
         <button class="btn btn-sm btn-outline-secondary ms-2" (click)="logCurrentState()">
           <i class="fas fa-bug"></i> Log État
         </button>
       </small>
     </div>
 
-    <!-- Le reste de votre template reste identique... -->
-    <!-- Page Header -->
-    <div class="page-header">
-      <!-- ... votre contenu existant ... -->
-    </div>
+    <!-- Carte contenant le formulaire de création -->
+    <app-card cardTitle="Création facture" [showContent]="true">
+      <form #factureForm="ngForm" (ngSubmit)="onSubmit()" novalidate>
+        <!-- Champ : Nom du fournisseur -->
+        <div class="mb-3">
+          <label for="nomFournisseur" class="form-label">Nom du fournisseur</label>
+          <input
+            type="text"
+            id="nomFournisseur"
+            class="form-control"
+            name="nomFournisseur"
+            [(ngModel)]="facture.nomFournisseur"
+            required
+          />
+        </div>
 
-    <!-- Formulaire -->
-    <form #factureForm="ngForm" (ngSubmit)="onSubmit()" novalidate>
-      <!-- ... toutes vos sections existantes ... -->
-    </form>
+        <!-- Champ : Date de facture -->
+        <div class="mb-3">
+          <label for="dateFacture" class="form-label">Date de facture</label>
+          <input
+            type="date"
+            id="dateFacture"
+            class="form-control"
+            name="dateFacture"
+            [(ngModel)]="facture.dateFacture"
+            required
+          />
+        </div>
 
+        <!-- Champ : Montant HT -->
+        <div class="mb-3">
+          <label for="montantHT" class="form-label">Montant HT</label>
+          <input
+            type="number"
+            id="montantHT"
+            class="form-control"
+            name="montantHT"
+            [(ngModel)]="facture.montantHT"
+            required
+          />
+        </div>
+
+        <!-- Champ : Validateur niveau 1 -->
+        <div class="mb-3">
+          <label for="validateur1" class="form-label">Validateur niveau 1</label>
+          <select
+            id="validateur1"
+            class="form-select"
+            name="validateur1Id"
+            [(ngModel)]="facture.validateur1Id"
+            required
+          >
+            <option *ngFor="let v1 of validateursV1" [value]="v1.id">
+              {{ v1.nomComplet }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Ajoutez ici vos autres champs (validateur V2, trésorier, commentaires…) -->
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="factureForm.invalid || isSubmitting"
+        >
+          Créer la facture
+        </button>
+      </form>
+    </app-card>
   </div>
 </div>

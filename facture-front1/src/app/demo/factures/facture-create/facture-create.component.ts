@@ -4,6 +4,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpClientModule } from '@angular/common/http';
 
 // Import des composants partagés
 import { CardComponent } from 'src/app/theme/shared/components/card/card.component';
@@ -43,12 +44,24 @@ export class FactureCreateComponent implements OnInit {
   // Modèle de facture
   facture: FactureCreateDto = {
     nomFournisseur: '',
-    dateFacture: new Date().toISOString().split('T')[0], // Date du jour par défaut
+    formeJuridique: undefined,
+    dateFacture: new Date().toISOString().split('T')[0],
+    dateReception: '',
+    dateLivraison: '',
     montantHT: 0,
-    tauxTVA: 20, // TVA par défaut à 20%
+    tauxTVA: 20,
+    rasTVA: 0,
+    modalite: undefined,
     refacturable: false,
+    designation: '',
+    refCommande: '',
+    periode: '',
     validateur1Id: 0,
-    validateur2Id: 0
+    validateur2Id: 0,
+    tresorierIdId: 0,
+    etrangerLocal: '',
+    commentaires: '',
+    pieceJointe: undefined
   };
 
   constructor(
@@ -535,7 +548,13 @@ export class FactureCreateComponent implements OnInit {
     // TODO: Remplacer par un système de notification plus élégant
     alert('ℹ️ ' + message);
   }
-
+// Méthode pour gérer l’upload de fichier
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.facture.pieceJointe = input.files[0];
+    }
+  }
   // ===== MÉTHODES DE DEBUG =====
 
   logCurrentState() {

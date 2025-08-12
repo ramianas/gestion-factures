@@ -103,67 +103,10 @@ export const NavigationItems: NavigationItem[] = [
         breadcrumbs: false
       }
     ]
-  },
-  // ===== SECTION COMPOSANTS UI =====
-  {
-    id: 'utilities',
-    title: 'Composants UI',
-    type: 'group',
-    icon: 'icon-navigation',
-    children: [
-      {
-        id: 'typography',
-        title: 'Typographie',
-        type: 'item',
-        classes: 'nav-item',
-        url: '/typography',
-        icon: 'font-size'
-      },
-      {
-        id: 'color',
-        title: 'Couleurs',
-        type: 'item',
-        classes: 'nav-item',
-        url: '/color',
-        icon: 'bg-colors'
-      },
-      {
-        id: 'ant-icons',
-        title: 'Icônes',
-        type: 'item',
-        classes: 'nav-item',
-        url: 'https://ant.design/components/icon',
-        icon: 'ant-design',
-        target: true,
-        external: true
-      }
-    ]
-  },
-  // ===== SECTION AUTRES =====
-  {
-    id: 'other',
-    title: 'Autres',
-    type: 'group',
-    icon: 'icon-navigation',
-    children: [
-      {
-        id: 'sample-page',
-        title: 'Page Exemple',
-        type: 'item',
-        url: '/sample-page',
-        classes: 'nav-item',
-        icon: 'chrome'
-      },
-      {
-        id: 'document',
-        title: 'Documentation',
-        type: 'item',
-        classes: 'nav-item',
-        url: 'https://codedthemes.gitbook.io/mantis-angular/',
-        icon: 'question',
-        target: true,
-        external: true
-      }
-    ]
   }
+   // ===== SECTION COMPOSANTS UI =====
+
+
+
+
 ];

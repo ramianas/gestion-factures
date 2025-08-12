@@ -53,15 +53,19 @@ public class FactureService {
         // Validation des validateurs
         validateValidateurs(facture);
 
-        // Génération automatique du numéro si pas fourni
-        if (facture.getNumero() == null || facture.getNumero().trim().isEmpty()) {
-            facture.setNumero(generateNumeroFacture());
-        }
 
         facture.setCreateur(createur);
         facture.setStatut(StatutFacture.SAISIE);
 
-        Facture savedFacture = factureRepository.save(facture);
+        Facture savedFacture = factureRepository.saveAndFlush(facture);
+
+        // Génération automatique du numéro si pas fourni
+        if (facture.getNumero() == null || facture.getNumero().trim().isEmpty()) {
+            facture.setNumero(generateNumeroFacture(savedFacture.getId()));
+        }
+
+        factureRepository.save(facture);
+
         log.info("Nouvelle facture créée: {} par {}", savedFacture.getNumero(), createur.getNomComplet());
 
         // Envoyer notification V1 après 24h (à implémenter avec un scheduler)
@@ -366,18 +370,10 @@ public class FactureService {
         }
     }
 
-    private String generateNumeroFacture() {
-        String prefix = "FACT-" + LocalDate.now().getYear() + "-";
+    private String generateNumeroFacture(Long idFacture) {
+        String prefix = "FACT" + LocalDate.now().getYear() + LocalDate.now().getMonthValue() + LocalDate.now().getDayOfMonth();
 
-        // Trouver le dernier numéro de l'année
-        LocalDate debutAnnee = LocalDate.of(LocalDate.now().getYear(), 1, 1);
-        LocalDate finAnnee = LocalDate.of(LocalDate.now().getYear(), 12, 31);
-
-        List<Facture> facturesAnnee = factureRepository.findByDateFactureBetween(debutAnnee, finAnnee);
-
-        int prochainNumero = facturesAnnee.size() + 1;
-
-        return prefix + String.format("%04d", prochainNumero);
+        return prefix + idFacture;
     }
 
     private User assignerTresorierAutomatiquement() {

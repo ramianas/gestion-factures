@@ -93,7 +93,7 @@ public class FactureController {
         } catch (Exception e) {
             log.error("Erreur lors de la création de la facture", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    createErrorResponse("Erreur interne lors de la création de la facture")
+                    createErrorResponse("Erreur interne lors de la création de la facture:" + e.getMessage())
             );
         }
     }

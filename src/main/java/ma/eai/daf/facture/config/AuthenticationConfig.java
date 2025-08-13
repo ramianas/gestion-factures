@@ -16,7 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class AuthenticationConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder; // ✅ Injecté depuis PasswordEncoderConfig
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {

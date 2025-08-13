@@ -104,27 +104,27 @@ export class AuthLoginComponent implements OnInit, OnDestroy {
 
   // Méthodes de test rapide (à supprimer en production)
   loginAsAdmin(): void {
-    this.loginData = { email: 'admin@example.com', password: 'admin123' };
+    this.loginData = { email: 'admin@factureapp.com', password: 'admin123' };
     this.submitLogin();
   }
 
   loginAsUser(): void {
-    this.loginData = { email: 'u1@example.com', password: 'admin123' };
+    this.loginData = { email: 'user@factureapp.com', password: 'user123' };
     this.submitLogin();
   }
 
   loginAsValidator1(): void {
-    this.loginData = { email: 'v1@example.com', password: 'admin123' };
+    this.loginData = { email: 'validator1@factureapp.com', password: 'validator123' };
     this.submitLogin();
   }
 
   loginAsValidator2(): void {
-    this.loginData = { email: 'v2@example.com', password: 'admin123' };
+    this.loginData = { email: 'validator2@factureapp.com', password: 'validator123' };
     this.submitLogin();
   }
 
   loginAsTreasurer(): void {
-    this.loginData = { email: 't1@example.com', password: 'admin123' };
+    this.loginData = { email: 'treasurer@factureapp.com', password: 'treasurer123' };
     this.submitLogin();
   }
 

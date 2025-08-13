@@ -1,8 +1,9 @@
+<!-- Fichier: facture-front1/src/app/demo/pages/authentication/auth-login/auth-login.component.html -->
+
 <div class="auth-main">
   <div class="auth-wrapper v3">
     <div class="auth-form">
       <div class="auth-header">
-        <!-- ✅ CHANGEMENT: Logo et nom personnalisés pour l'application de gestion de factures -->
         <a href="javascript:">
           <div class="brand-container">
             <!-- Icône de facture SVG personnalisée -->
@@ -20,33 +21,161 @@
           </div>
         </a>
       </div>
+
       <div class="card my-5">
         <div class="card-body">
-          <!-- ✅ SUPPRESSION: Lien "Pas de compte" retiré -->
           <div class="mb-4">
             <h3 class="mb-0"><b>Connexion</b></h3>
+            <p class="text-muted mt-2">Connectez-vous à votre compte</p>
           </div>
-          <div class="form-group mb-3">
-            <label class="form-label" for="email">Adresse Email</label>
-            <input type="email" class="form-control" id="email" placeholder="Votre email" value="admin@factureapp.com" />
+
+          <!-- Affichage des erreurs -->
+          <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ errorMessage }}
+            <button type="button" class="btn-close" (click)="clearError()"></button>
           </div>
-          <div class="form-group mb-3">
-            <label class="form-label" for="password">Mot de passe</label>
-            <input type="password" class="form-control" id="password" placeholder="Votre mot de passe" value="admin123" />
-          </div>
-          <div class="d-flex mt-1 justify-content-between align-items-center">
-            <div class="form-check">
-              <input class="form-check-input input-primary" type="checkbox" id="customCheckc1" checked="" />
-              <label class="form-check-label text-muted" for="customCheckc1">Se souvenir de moi</label>
+
+          <!-- Formulaire de connexion -->
+          <form #loginForm="ngForm" (ngSubmit)="onSubmit(loginForm)" novalidate>
+            <div class="form-group mb-3">
+              <label class="form-label" for="email">Adresse Email *</label>
+              <input
+                type="email"
+                class="form-control"
+                id="email"
+                name="email"
+                placeholder="votre.email@entreprise.com"
+                [(ngModel)]="loginData.email"
+                #emailField="ngModel"
+                required
+                email
+                [class.is-invalid]="emailField.invalid && emailField.touched"
+                [disabled]="isLoading"
+              />
+              <div class="invalid-feedback" *ngIf="emailField.invalid && emailField.touched">
+                <div *ngIf="emailField.errors?.['required']">L'email est obligatoire</div>
+                <div *ngIf="emailField.errors?.['email']">Format d'email invalide</div>
+              </div>
             </div>
-            <h5 class="text-secondary f-w-400 mb-0"><a href="javascript:">Mot de passe oublié ?</a></h5>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="password">Mot de passe *</label>
+              <div class="input-group">
+                <input
+                  [type]="showPassword ? 'text' : 'password'"
+                  class="form-control"
+                  id="password"
+                  name="password"
+                  placeholder="Votre mot de passe"
+                  [(ngModel)]="loginData.password"
+                  #passwordField="ngModel"
+                  required
+                  minlength="6"
+                  [class.is-invalid]="passwordField.invalid && passwordField.touched"
+                  [disabled]="isLoading"
+                />
+                <button
+                  class="btn btn-outline-secondary"
+                  type="button"
+                  (click)="togglePasswordVisibility()"
+                  [disabled]="isLoading"
+                >
+                  <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" *ngIf="passwordField.invalid && passwordField.touched">
+                <div *ngIf="passwordField.errors?.['required']">Le mot de passe est obligatoire</div>
+                <div *ngIf="passwordField.errors?.['minlength']">Le mot de passe doit contenir au moins 6 caractères</div>
+              </div>
+            </div>
+
+            <div class="d-flex mt-1 justify-content-between align-items-center">
+              <div class="form-check">
+                <input class="form-check-input input-primary" type="checkbox" id="rememberMe" />
+                <label class="form-check-label text-muted" for="rememberMe">Se souvenir de moi</label>
+              </div>
+              <a href="javascript:" class="text-secondary f-w-400 mb-0">Mot de passe oublié ?</a>
+            </div>
+
+            <div class="d-grid mt-4">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="loginForm.invalid || isLoading"
+              >
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!isLoading" class="fas fa-sign-in-alt me-2"></i>
+                {{ isLoading ? 'Connexion...' : 'Se connecter' }}
+              </button>
+            </div>
+          </form>
+
+          <!-- Comptes de test (à supprimer en production) -->
+          <div class="mt-4" *ngIf="!isLoading">
+            <hr>
+            <h6 class="text-center text-muted mb-3">Comptes de test</h6>
+            <div class="row g-2">
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm w-100"
+                  (click)="loginAsAdmin()"
+                  title="Administrateur"
+                >
+                  <i class="fas fa-user-shield me-1"></i>
+                  Admin
+                </button>
+              </div>
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm w-100"
+                  (click)="loginAsUser()"
+                  title="Utilisateur de saisie"
+                >
+                  <i class="fas fa-edit me-1"></i>
+                  Saisie
+                </button>
+              </div>
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn btn-outline-warning btn-sm w-100"
+                  (click)="loginAsValidator1()"
+                  title="Validateur niveau 1"
+                >
+                  <i class="fas fa-check me-1"></i>
+                  V1
+                </button>
+              </div>
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn btn-outline-info btn-sm w-100"
+                  (click)="loginAsValidator2()"
+                  title="Validateur niveau 2"
+                >
+                  <i class="fas fa-check-double me-1"></i>
+                  V2
+                </button>
+              </div>
+              <div class="col-12">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm w-100"
+                  (click)="loginAsTreasurer()"
+                  title="Trésorier"
+                >
+                  <i class="fas fa-coins me-1"></i>
+                  Trésorier
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="d-grid mt-4">
-            <button type="button" class="btn btn-primary">Se connecter</button>
-          </div>
-          <!-- ✅ SUPPRESSION: Section "Ou se connecter avec" entièrement retirée -->
         </div>
       </div>
+
       <div class="auth-footer row">
         <div class="col my-1">
           <p class="m-0">

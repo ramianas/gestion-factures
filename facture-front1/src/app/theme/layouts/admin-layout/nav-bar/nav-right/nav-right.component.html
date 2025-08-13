@@ -1,9 +1,13 @@
+<!-- Fichier: facture-front1/src/app/theme/layouts/admin-layout/nav-bar/nav-right/nav-right.component.html -->
+
 <ul class="list-unstyled">
   <li class="pc-h-item">
     <a href="https://github.com/codedthemes/mantis-free-angular-admin-template" target="_blank" class="pc-head-link me-0 bg-gray-200">
       <i antIcon type="github" theme="outline"></i>
     </a>
   </li>
+
+  <!-- Notifications -->
   <li class="dropdown pc-h-item" ngbDropdown>
     <a href="javascript:" class="pc-head-link dropdown-toggle arrow-none me-0 bg-gray-200" data-bs-toggle="dropdown" ngbDropdownToggle>
       <i antIcon type="bell" theme="outline"></i>
@@ -11,7 +15,7 @@
     </a>
     <div class="dropdown-menu dropdown-notification dropdown-menu-end pc-h-dropdown" ngbDropdownMenu>
       <div class="dropdown-header d-flex align-items-center justify-content-between">
-        <h5 class="m-0">Notification</h5>
+        <h5 class="m-0">Notifications</h5>
         <a class="bg-transparent"><i class="text-success d-flex f-20" antIcon theme="outline" type="check-circle"></i></a>
       </div>
       <div class="dropdown-divider mb-0"></div>
@@ -26,9 +30,7 @@
                 <div class="flex-grow-1 ms-3">
                   <span class="float-end text-muted">3:00 AM</span>
                   <p class="text-body mb-0">
-                    It's
-                    <b>Cristina danny's</b>
-                    birthday today.
+                    Nouvelle facture à valider
                   </p>
                   <span class="text-muted">2 min ago</span>
                 </div>
@@ -42,8 +44,7 @@
                 <div class="flex-grow-1 ms-3">
                   <span class="float-end text-muted">6:00 PM</span>
                   <p class="text-body mb-1">
-                    <b>Aida Burg</b>
-                    commented your post.
+                    Facture validée avec succès
                   </p>
                   <span class="text-muted">5 August</span>
                 </div>
@@ -57,26 +58,9 @@
                 <div class="flex-grow-1 ms-3">
                   <span class="float-end text-muted">2:45 PM</span>
                   <p class="text-body mb-1">
-                    Your Profile is Complete &nbsp;
-                    <b>60%</b>
+                    Échéance proche pour facture
                   </p>
                   <span class="text-muted">7 hours ago</span>
-                </div>
-              </div>
-            </a>
-            <a class="list-group-item list-group-item-action">
-              <div class="d-flex">
-                <div class="flex-shrink-0">
-                  <div class="user-avatar bg-light-primary"><i class="d-flex" antIcon theme="outline" type="phone"></i></div>
-                </div>
-                <div class="flex-grow-1 ms-3">
-                  <span class="float-end text-muted">9:10 PM</span>
-                  <p class="text-body mb-1">
-                    <b>Cristina Danny</b>
-                    invited to join
-                    <b>Meeting.</b>
-                  </p>
-                  <span class="text-muted">Daily scrum meeting time</span>
                 </div>
               </div>
             </a>
@@ -85,14 +69,16 @@
       </ng-scrollbar>
       <div class="dropdown-divider mt-0"></div>
       <div class="text-center py-2">
-        <a href="javascript:" class="link-primary">View all</a>
+        <a href="javascript:" class="link-primary">Voir toutes</a>
       </div>
     </div>
   </li>
-  <li class="dropdown pc-h-item header-user-profile" ngbDropdown>
+
+  <!-- Profil utilisateur -->
+  <li class="dropdown pc-h-item header-user-profile" ngbDropdown *ngIf="isAuthenticated && currentUser">
     <a href="javascript:" class="pc-head-link dropdown-toggle arrow-none me-0" ngbDropdownToggle>
       <img src="assets/images/user/avatar-2.jpg" alt="user-image" class="user-avatar me-2" />
-      <span class="f-w-600">John Doe</span>
+      <span class="f-w-600">{{ getUserDisplayName() }}</span>
     </a>
     <div class="dropdown-menu dropdown-user-profile dropdown-menu-end pc-h-dropdown" ngbDropdownMenu>
       <div class="dropdown-header">
@@ -101,47 +87,86 @@
             <img src="assets/images/user/avatar-2.jpg" alt="user-image" class="user-avatar wid-35" />
           </div>
           <div class="flex-grow-1 ms-3 text-start">
-            <h6 class="mb-0">JWT User</h6>
-            <span>UI/UX Designer</span>
+            <h6 class="mb-0">{{ getUserDisplayName() }}</h6>
+            <span>{{ getUserRoleDisplay() }}</span>
+            <small class="d-block text-muted">{{ currentUser.email }}</small>
           </div>
-          <a href="javascript:" class="bg-transparent"><i class="d-flex f-20" antIcon theme="outline" type="logout"></i></a>
+          <a href="javascript:" class="bg-transparent" (click)="logout()">
+            <i class="d-flex f-20" antIcon theme="outline" type="logout" title="Se déconnecter"></i>
+          </a>
         </div>
       </div>
+
       <ul ngbNav #nav="ngbNav" class="nav drp-tabs nav-fill nav-tabs">
         <li ngbNavItem="1">
           <a ngbNavLink>
             <i antIcon theme="outline" type="user" class="me-2"></i>
-            Profile
+            Profil
           </a>
           <ng-template ngbNavContent>
-            @for (task of profile; track task) {
-              <div>
-                <a href="javascript:" class="dropdown-item">
-                  <i class="text-muted" antIcon theme="outline" type="{{ task.icon }}"></i>
-                  <span>{{ task.title }}</span>
-                </a>
-              </div>
-            }
+            <div *ngFor="let action of getProfileActions()">
+              <a href="javascript:" class="dropdown-item" (click)="action.action()">
+                <i class="text-muted" antIcon theme="outline" [type]="action.icon"></i>
+                <span>{{ action.title }}</span>
+              </a>
+            </div>
           </ng-template>
         </li>
         <li ngbNavItem="2">
           <a ngbNavLink>
             <i class="me-2" antIcon theme="outline" type="setting"></i>
-            Setting
+            Paramètres
           </a>
           <ng-template ngbNavContent>
-            @for (task of setting; track task) {
-              <div>
-                <a href="javascript:" class="dropdown-item">
-                  <i class="text-muted" antIcon theme="outline" type="{{ task.icon }}"></i>
-                  <span>{{ task.title }}</span>
-                </a>
-              </div>
-            }
+            <div *ngFor="let action of getSettingActions()">
+              <a href="javascript:" class="dropdown-item" (click)="action.action()">
+                <i class="text-muted" antIcon theme="outline" [type]="action.icon"></i>
+                <span>{{ action.title }}</span>
+              </a>
+            </div>
           </ng-template>
         </li>
       </ul>
       <div [ngbNavOutlet]="nav"></div>
+
+      <!-- Informations utilisateur supplémentaires -->
+      <div class="dropdown-divider"></div>
+      <div class="px-3 py-2">
+        <div class="row text-center">
+          <div class="col-6" *ngIf="currentUser.role === 'U1'">
+            <div class="d-grid">
+              <span class="text-muted f-12">Factures créées</span>
+              <h6 class="mb-0">{{ currentUser.nbFacturesCreees || 0 }}</h6>
+            </div>
+          </div>
+          <div class="col-6" *ngIf="currentUser.role === 'V1'">
+            <div class="d-grid">
+              <span class="text-muted f-12">Validations V1</span>
+              <h6 class="mb-0">{{ currentUser.nbFacturesValideesN1 || 0 }}</h6>
+            </div>
+          </div>
+          <div class="col-6" *ngIf="currentUser.role === 'V2'">
+            <div class="d-grid">
+              <span class="text-muted f-12">Validations V2</span>
+              <h6 class="mb-0">{{ currentUser.nbFacturesValideesN2 || 0 }}</h6>
+            </div>
+          </div>
+          <div class="col-6" *ngIf="currentUser.role === 'T1'">
+            <div class="d-grid">
+              <span class="text-muted f-12">Factures traitées</span>
+              <h6 class="mb-0">{{ currentUser.nbFacturesTraitees || 0 }}</h6>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </li>
+
+  <!-- Bouton de connexion si non connecté -->
+  <li class="pc-h-item" *ngIf="!isAuthenticated">
+    <a routerLink="/login" class="pc-head-link me-0 btn btn-primary btn-sm">
+      <i antIcon type="login" theme="outline" class="me-1"></i>
+      Se connecter
+    </a>
   </li>
 </ul>

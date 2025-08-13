@@ -1,11 +1,14 @@
-// Angular import
-import { Component, OnInit, inject, output } from '@angular/core';
+// Fichier: facture-front1/src/app/theme/layouts/admin-layout/navigation/nav-content/nav-content.component.ts
+
+import { Component, OnInit, inject, output, OnDestroy } from '@angular/core';
 import { CommonModule, Location, LocationStrategy } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 
-// project import
+// Project import
 import { NavigationItem, NavigationItems } from '../navigation';
 import { environment } from 'src/environments/environment';
+import { AuthService, User } from '../../../../../services/auth.service';
 
 import { NavGroupComponent } from './nav-group/nav-group.component';
 
@@ -20,7 +23,15 @@ import {
   FontSizeOutline,
   ProfileOutline,
   BgColorsOutline,
-  AntDesignOutline
+  AntDesignOutline,
+  PlusOutline,
+  FileTextOutline,
+  CheckOutline,
+  CheckCircleOutline,
+  DollarOutline,
+  BellOutline,
+  UserOutline,
+  BarChartOutline
 } from '@ant-design/icons-angular/icons';
 import { NgScrollbarModule } from 'ngx-scrollbar';
 
@@ -30,15 +41,17 @@ import { NgScrollbarModule } from 'ngx-scrollbar';
   templateUrl: './nav-content.component.html',
   styleUrls: ['./nav-content.component.scss']
 })
-export class NavContentComponent implements OnInit {
+export class NavContentComponent implements OnInit, OnDestroy {
   private location = inject(Location);
   private locationStrategy = inject(LocationStrategy);
   private iconService = inject(IconService);
+  private destroy$ = new Subject<void>();
 
   // public props
   NavCollapsedMob = output();
 
-  navigations: NavigationItem[];
+  navigations: NavigationItem[] = [];
+  currentUser: User | null = null;
 
   // version
   title = 'Demo application for version numbering';
@@ -48,7 +61,7 @@ export class NavContentComponent implements OnInit {
   windowWidth = window.innerWidth;
 
   // Constructor
-  constructor() {
+  constructor(private authService: AuthService) {
     this.iconService.addIcon(
       ...[
         DashboardOutline,
@@ -59,10 +72,19 @@ export class NavContentComponent implements OnInit {
         BgColorsOutline,
         AntDesignOutline,
         ChromeOutline,
-        QuestionOutline
+        QuestionOutline,
+        PlusOutline,
+        FileTextOutline,
+        CheckOutline,
+        CheckCircleOutline,
+        DollarOutline,
+        BellOutline,
+        UserOutline,
+        BarChartOutline,
+        UserOutline,
+        LoginOutline
       ]
     );
-    this.navigations = NavigationItems;
   }
 
   // Life cycle events
@@ -70,6 +92,58 @@ export class NavContentComponent implements OnInit {
     if (this.windowWidth < 1025) {
       (document.querySelector('.coded-navbar') as HTMLDivElement).classList.add('menupos-static');
     }
+
+    // S'abonner aux changements d'utilisateur
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+        this.updateNavigationBasedOnRole();
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private updateNavigationBasedOnRole(): void {
+    if (!this.currentUser) {
+      this.navigations = [];
+      return;
+    }
+
+    // Filtrer la navigation en fonction du rôle de l'utilisateur
+    this.navigations = this.filterNavigationByRole(NavigationItems, this.currentUser.role);
+  }
+
+  private filterNavigationByRole(items: NavigationItem[], userRole: string): NavigationItem[] {
+    return items
+      .map(item => {
+        const filteredItem = { ...item };
+
+        // Si c'est un groupe, filtrer ses enfants
+        if (item.type === 'group' && item.children) {
+          const filteredChildren = this.filterNavigationByRole(item.children, userRole);
+
+          // Si aucun enfant n'est visible, ne pas afficher le groupe
+          if (filteredChildren.length === 0) {
+            return null;
+          }
+
+          filteredItem.children = filteredChildren;
+        }
+        // Si c'est un item avec des rôles spécifiés
+        else if (item.type === 'item' && item.roles) {
+          // Si l'utilisateur n'a pas le bon rôle, ne pas afficher l'item
+          if (!item.roles.includes(userRole)) {
+            return null;
+          }
+        }
+
+        return filteredItem;
+      })
+      .filter(item => item !== null) as NavigationItem[];
   }
 
   fireOutClick() {
@@ -98,7 +172,7 @@ export class NavContentComponent implements OnInit {
   }
 
   navMob() {
-    if (this.windowWidth < 1025 && document.querySelector('app-navigation.coded-navbar').classList.contains('mob-open')) {
+    if (this.windowWidth < 1025 && document.querySelector('app-navigation.coded-navbar')?.classList.contains('mob-open')) {
       this.NavCollapsedMob.emit();
     }
   }

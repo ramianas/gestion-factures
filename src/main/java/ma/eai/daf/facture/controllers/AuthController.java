@@ -1,3 +1,5 @@
+// Fichier: src/main/java/ma/eai/daf/facture/controllers/AuthController.java
+
 package ma.eai.daf.facture.controllers;
 
 import ma.eai.daf.facture.entities.User;
@@ -7,13 +9,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,80 +34,103 @@ public class AuthController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             log.info("Tentative de connexion pour l'utilisateur: {}", loginRequest.getEmail());
 
-            // Vérifier si l'utilisateur existe et le mot de passe est correct
-            Optional<User> userOpt = userService.getUserByEmail(loginRequest.getEmail());
-
-            if (userOpt.isEmpty()) {
-                log.warn("Utilisateur non trouvé: {}", loginRequest.getEmail());
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Email ou mot de passe incorrect"
-                ));
-            }
-// ...
-            User user = userOpt.get();
-
-            if (!user.isActif()) {
-                log.warn("Utilisateur inactif: {}", loginRequest.getEmail());
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Compte utilisateur désactivé"
-                ));
-            }
-
-// 🔎 DEBUG: voir le hash stocké et le résultat de la comparaison
-            log.info("Hash en base pour {} = {}", user.getEmail(), user.getMotDePasse());
-            log.info("BCrypt matches? {}", passwordEncoder.matches(loginRequest.getPassword(), user.getMotDePasse()));
-
-// Vérifier le mot de passe
-            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getMotDePasse())) {
-                log.warn("Mot de passe incorrect pour: {}", loginRequest.getEmail());
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Email ou mot de passe incorrect"
-                ));
-            }
-// ...
-
+            // Authentification avec Spring Security
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
 
             // Générer le token JWT
-            String token = jwtTokenProvider.generateToken(user.getEmail());
+            String token = jwtTokenProvider.generateToken(authentication);
+
+            // Récupérer les informations utilisateur
+            User user = userService.getUserByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
             log.info("Connexion réussie pour l'utilisateur: {} ({})", user.getNomComplet(), user.getRole());
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Connexion réussie",
-                    "token", token,
-                    "user", Map.of(
-                            "id", user.getId(),
-                            "nom", user.getNom(),
-                            "prenom", user.getPrenom() != null ? user.getPrenom() : "",
-                            "email", user.getEmail(),
-                            "nomComplet", user.getNomComplet(),
-                            "role", user.getRole().name(),
-                            "actif", user.isActif()
-                    )
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Connexion réussie");
+            response.put("token", token);
+            response.put("tokenType", "Bearer");
+            response.put("expiresIn", 86400); // 24 heures en secondes
+
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("id", user.getId());
+            userInfo.put("nom", user.getNom());
+            userInfo.put("prenom", user.getPrenom() != null ? user.getPrenom() : "");
+            userInfo.put("email", user.getEmail());
+            userInfo.put("nomComplet", user.getNomComplet());
+            userInfo.put("role", user.getRole().name());
+            userInfo.put("actif", user.isActif());
+
+            response.put("user", userInfo);
+
+            return ResponseEntity.ok(response);
+
+        } catch (BadCredentialsException e) {
+            log.warn("Échec de connexion - Identifiants incorrects pour: {}", loginRequest.getEmail());
+            return ResponseEntity.badRequest().body(createErrorResponse("Email ou mot de passe incorrect"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la connexion pour: {}", loginRequest.getEmail(), e);
+            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur interne lors de la connexion"));
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refreshToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Token manquant ou format invalide"));
+            }
+
+            String token = authHeader.substring(7);
+
+            if (!jwtTokenProvider.validateToken(token)) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Token invalide ou expiré"));
+            }
+
+            String email = jwtTokenProvider.getUsernameFromToken(token);
+            User user = userService.getUserByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+            if (!user.isActif()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Compte utilisateur désactivé"));
+            }
+
+            // Générer un nouveau token
+            String newToken = jwtTokenProvider.generateToken(email);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Token rafraîchi avec succès");
+            response.put("token", newToken);
+            response.put("tokenType", "Bearer");
+            response.put("expiresIn", 86400);
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erreur lors de la connexion", e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                    "success", false,
-                    "message", "Erreur interne lors de la connexion"
-            ));
+            log.error("Erreur lors du rafraîchissement du token", e);
+            return ResponseEntity.badRequest().body(createErrorResponse("Impossible de rafraîchir le token"));
         }
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout() {
-        // Dans un vrai système, vous pourriez invalider le token côté serveur
+        // Nettoyer le contexte de sécurité
+        SecurityContextHolder.clearContext();
+
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Déconnexion réussie"
@@ -112,25 +141,18 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> getCurrentUser(Authentication authentication) {
         try {
             if (authentication == null || authentication.getName() == null) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Token invalide ou expiré"
-                ));
+                return ResponseEntity.badRequest().body(createErrorResponse("Token invalide ou expiré"));
             }
 
             String email = authentication.getName();
             Optional<User> userOpt = userService.getUserByEmail(email);
 
             if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Utilisateur non trouvé"
-                ));
+                return ResponseEntity.badRequest().body(createErrorResponse("Utilisateur non trouvé"));
             }
 
             User user = userOpt.get();
 
-            // ✅ SOLUTION : Utiliser HashMap au lieu de Map.of() pour éviter la limite
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("id", user.getId());
             userInfo.put("nom", user.getNom());
@@ -152,16 +174,55 @@ public class AuthController {
 
         } catch (Exception e) {
             log.error("Erreur lors de la récupération du profil utilisateur", e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                    "success", false,
-                    "message", "Erreur lors de la récupération du profil"
-            ));
+            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur lors de la récupération du profil"));
         }
     }
 
-    // Classe interne pour la requête de login
+    @PostMapping("/validate-token")
+    public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Token manquant ou format invalide"));
+            }
+
+            String token = authHeader.substring(7);
+            boolean isValid = jwtTokenProvider.validateToken(token);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("valid", isValid);
+
+            if (isValid) {
+                String email = jwtTokenProvider.getUsernameFromToken(token);
+                response.put("email", email);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(createErrorResponse("Erreur lors de la validation du token"));
+        }
+    }
+
+    // ===== MÉTHODES UTILITAIRES =====
+
+    private Map<String, Object> createErrorResponse(String message) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("message", message);
+        errorResponse.put("timestamp", System.currentTimeMillis());
+        return errorResponse;
+    }
+
+    // ===== DTO CLASSES =====
+
     public static class LoginRequest {
+        @NotBlank(message = "L'email est obligatoire")
+        @Email(message = "Format d'email invalide")
         private String email;
+
+        @NotBlank(message = "Le mot de passe est obligatoire")
+        @Size(min = 6, message = "Le mot de passe doit contenir au moins 6 caractères")
         private String password;
 
         // Constructeurs

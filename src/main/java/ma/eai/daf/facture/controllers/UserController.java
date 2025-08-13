@@ -31,7 +31,7 @@ public class UserController {
     // ===== ENDPOINTS ADMIN =====
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         try {
             List<User> users = userService.getAllUsers();
@@ -47,7 +47,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         try {
             return userService.getUserById(id)
@@ -65,7 +65,7 @@ public class UserController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+   // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> createUser(@Valid @RequestBody UserCreateDto userCreateDto) {
         try {
             log.info("Création d'un nouvel utilisateur: {}", userCreateDto.getEmail());
@@ -92,7 +92,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+   // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody UserUpdateDto userUpdateDto) {
@@ -123,7 +123,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+   // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable Long id) {
         try {
             log.info("Suppression de l'utilisateur {}", id);
@@ -152,7 +152,7 @@ public class UserController {
     // ===== ENDPOINTS DE CONSULTATION =====
 
     @GetMapping("/by-role/{role}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
+  //  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
     public ResponseEntity<List<UserDto>> getUsersByRole(@PathVariable RoleType role) {
         try {
             List<User> users = userService.getUsersByRole(role);
@@ -168,7 +168,7 @@ public class UserController {
     }
 
     @GetMapping("/validateurs-v1")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
+  //  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
     public ResponseEntity<List<UserDto>> getValidateursV1() {
         try {
             List<User> users = userService.getValidateursV1();
@@ -181,7 +181,7 @@ public class UserController {
     }
 
     @GetMapping("/validateurs-v2")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
+   // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
     public ResponseEntity<List<UserDto>> getValidateursV2() {
         try {
             List<User> users = userService.getValidateursV2();
@@ -194,7 +194,7 @@ public class UserController {
     }
 
     @GetMapping("/tresoriers")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
+  //  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1')")
     public ResponseEntity<List<UserDto>> getTresoriers() {
         try {
             List<User> users = userService.getTresoriers();
@@ -207,7 +207,7 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
+   // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
     public ResponseEntity<List<UserDto>> searchUsers(@RequestParam String terme) {
         try {
             if (terme == null || terme.trim().length() < 2) {
@@ -229,7 +229,7 @@ public class UserController {
     // ===== PROFIL UTILISATEUR =====
 
     @GetMapping("/me")
-    @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
+   // @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         try {
             String email = authentication.getName();
@@ -250,7 +250,7 @@ public class UserController {
     // ===== STATISTIQUES =====
 
     @GetMapping("/statistiques")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> getStatistiques() {
         try {
             Map<String, Object> stats = Map.of(

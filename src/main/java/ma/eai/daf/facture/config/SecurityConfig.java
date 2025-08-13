@@ -1,5 +1,8 @@
 package ma.eai.daf.facture.config;
 
+import ma.eai.daf.facture.security.JwtAuthenticationFilter;
+import ma.eai.daf.facture.security.JwtTokenProvider;
+import ma.eai.daf.facture.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -9,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -27,26 +31,36 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           JwtTokenProvider jwtTokenProvider,
+                                           CustomUserDetailsService userDetailsService) throws Exception {
+
+        // ✅ Créer le filtre JWT ici au lieu de l'injecter via le constructeur
+        JwtAuthenticationFilter jwtAuthenticationFilter =
+                new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        // Endpoints publics
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
+                        // Endpoints publics (pas d'authentification requise)
+                        .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+
+                        // Endpoints de test (temporaire)
+                        .requestMatchers("/api/factures/test/**").permitAll()
+                        .requestMatchers("/api/factures/**/test").permitAll()
+                        .requestMatchers("/api/factures/**-test").permitAll()
 
                         // Swagger (si vous l'ajoutez plus tard)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // Tous les autres endpoints nécessitent une authentification
+                        // ✅ AUTHENTIFICATION REQUISE pour tous les autres endpoints
                         .anyRequest().authenticated()
-                );
-
-        // TODO: Ajouter JWT filter quand vous implémenterez l'authentification
-        // http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                )
+                // ✅ Ajouter le filtre JWT créé localement
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -55,10 +69,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Origines autorisées (ajustez selon vos besoins)
+        // Origines autorisées
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:4200",
                 "http://localhost:3000",
+                "http://localhost:8080",
                 "https://votre-frontend.com"
         ));
 

@@ -1,5 +1,3 @@
-// Fichier: src/main/java/ma/eai/daf/facture/config/SecurityConfig.java
-
 package ma.eai.daf.facture.config;
 
 import ma.eai.daf.facture.security.JwtAuthenticationEntryPoint;
@@ -46,65 +44,22 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(authz -> authz
-                        // ===== ENDPOINTS PUBLICS (ORDRE IMPORTANT : PLUS SPÉCIFIQUE D'ABORD) =====
+                        // ===== ENDPOINTS PUBLICS =====
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ===== ENDPOINTS DE TEST (à supprimer en production) =====
-                        .requestMatchers("/api/factures/test/**").permitAll()
-                        .requestMatchers("/api/factures/**/test").permitAll()
-                        .requestMatchers("/api/factures/**-test").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
-
-                        // ===== SWAGGER / API DOCS =====
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-
-                        // ===== ENDPOINTS ADMIN UNIQUEMENT =====
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
                         // ===== ENDPOINTS FACTURES PAR RÔLE =====
-                        // Création et modification de factures (U1 uniquement)
                         .requestMatchers(HttpMethod.POST, "/api/factures").hasRole("U1")
-                        .requestMatchers(HttpMethod.PUT, "/api/factures/**").hasRole("U1")
-                        .requestMatchers(HttpMethod.DELETE, "/api/factures/**").hasRole("U1")
-                        .requestMatchers("/api/factures/mes-factures").hasRole("U1")
-                        .requestMatchers("/api/factures/**/soumettre-v1").hasRole("U1")
-
-                        // Validation V1 (V1 uniquement)
+                        .requestMatchers(HttpMethod.GET, "/api/factures/donnees-reference").hasRole("U1")
                         .requestMatchers("/api/factures/en-attente-v1").hasRole("V1")
-                        .requestMatchers("/api/factures/**/valider-v1").hasRole("V1")
-
-                        // Validation V2 (V2 uniquement)
                         .requestMatchers("/api/factures/en-attente-v2").hasRole("V2")
-                        .requestMatchers("/api/factures/**/valider-v2").hasRole("V2")
-
-                        // Trésorerie (T1 uniquement)
                         .requestMatchers("/api/factures/en-attente-tresorerie").hasRole("T1")
-                        .requestMatchers("/api/factures/**/payer").hasRole("T1")
 
-                        // Consultation générale (tous les rôles connectés)
-                        .requestMatchers(HttpMethod.GET, "/api/factures/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-                        .requestMatchers("/api/factures/mes-taches").hasAnyRole("V1", "V2", "T1")
-                        .requestMatchers("/api/factures/urgentes").hasAnyRole("V1", "V2", "T1", "ADMIN")
-                        .requestMatchers("/api/factures/en-retard").hasAnyRole("T1", "ADMIN")
-                        .requestMatchers("/api/factures/tableau-bord").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-                        .requestMatchers("/api/factures/donnees-reference").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-
-                        // ===== ENDPOINTS UTILISATEURS =====
-                        .requestMatchers(HttpMethod.GET, "/api/users/me").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-                        .requestMatchers("/api/users/validateurs-v1").hasAnyRole("U1", "ADMIN")
-                        .requestMatchers("/api/users/validateurs-v2").hasAnyRole("U1", "ADMIN")
-                        .requestMatchers("/api/users/tresoriers").hasAnyRole("U1", "ADMIN")
-                        .requestMatchers("/api/users/search").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
-
-                        // ===== ENDPOINTS NOTIFICATIONS =====
-                        .requestMatchers("/api/notifications/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
-
-                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION (DOIT ÊTRE EN DERNIER) =====
+                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION =====
                         .anyRequest().authenticated()
                 )
+                // ✅ CORRECTION : Utiliser le bean injecté
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

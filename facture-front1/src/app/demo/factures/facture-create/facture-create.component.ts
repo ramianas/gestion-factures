@@ -1,6 +1,6 @@
 // Fichier: src/app/demo/factures/facture-create/facture-create.component.ts
 
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -27,20 +27,14 @@ import { FactureService } from '../services/facture.service';
 })
 export class FactureCreateComponent implements OnInit {
 
-  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
-
   // Propriété Math pour les templates
   Math = Math;
 
   // État du composant
   isSubmitting = false;
-  isLoading = false;
-  hasError = false;
-  errorMessage = '';
-  isDragOver = false;
-
-  // Fichier sélectionné
-  selectedFile: File | null = null;
+  isLoading = false; // ✅ CHANGEMENT: Démarrer à false
+  hasError = false;  // ✅ AJOUT: Pour gérer les erreurs
+  errorMessage = ''; // ✅ AJOUT: Message d'erreur
 
   // Données de référence
   validateursV1: User[] = [];
@@ -109,12 +103,14 @@ export class FactureCreateComponent implements OnInit {
       this.hasError = false;
       console.log('📡 Tentative de chargement des données de référence...');
 
+      // ✅ AJOUT: Vérification si le service existe
       if (!this.factureService) {
         console.warn('⚠️ FactureService non disponible, utilisation des données par défaut');
         this.mockDonneesReference();
         return;
       }
 
+      // ✅ AJOUT: Vérification si la méthode existe
       if (typeof this.factureService.getDonneesReference !== 'function') {
         console.warn('⚠️ Méthode getDonneesReference non disponible, utilisation des données par défaut');
         this.mockDonneesReference();
@@ -137,6 +133,7 @@ export class FactureCreateComponent implements OnInit {
             tresorierCount: this.tresoriers.length
           });
 
+          // Si aucune donnée n'est reçue, utiliser les données par défaut
           if (this.validateursV1.length === 0 && this.validateursV2.length === 0) {
             console.log('📝 Aucune donnée reçue, utilisation des données par défaut');
             this.mockDonneesReference();
@@ -147,6 +144,8 @@ export class FactureCreateComponent implements OnInit {
           this.hasError = true;
           this.errorMessage = 'Impossible de charger les données. Utilisation des données par défaut.';
           this.isLoading = false;
+
+          // ✅ UTILISER DES DONNÉES PAR DÉFAUT EN CAS D'ERREUR
           this.mockDonneesReference();
         }
       });
@@ -156,17 +155,20 @@ export class FactureCreateComponent implements OnInit {
       this.hasError = true;
       this.errorMessage = 'Erreur critique lors du chargement des données.';
       this.isLoading = false;
+
+      // ✅ UTILISER DES DONNÉES PAR DÉFAUT EN CAS D'ERREUR
       this.mockDonneesReference();
     }
   }
 
+  // ✅ AJOUT: Méthode pour utiliser des données de test
   private mockDonneesReference() {
     console.log('🔄 Utilisation de données de test...');
 
     this.validateursV1 = [
       {
         id: 1,
-        nomComplet: 'Jean Dupont',
+        nomComplet: 'Jean Dupont (V1)',
         email: 'jean.dupont@example.com',
         nom: 'Dupont',
         prenom: 'Jean',
@@ -175,7 +177,7 @@ export class FactureCreateComponent implements OnInit {
       },
       {
         id: 2,
-        nomComplet: 'Marie Martin',
+        nomComplet: 'Marie Martin (V1)',
         email: 'marie.martin@example.com',
         nom: 'Martin',
         prenom: 'Marie',
@@ -184,7 +186,7 @@ export class FactureCreateComponent implements OnInit {
       },
       {
         id: 3,
-        nomComplet: 'Paul Durand',
+        nomComplet: 'Paul Durand (V1)',
         email: 'paul.durand@example.com',
         nom: 'Durand',
         prenom: 'Paul',
@@ -196,7 +198,7 @@ export class FactureCreateComponent implements OnInit {
     this.validateursV2 = [
       {
         id: 4,
-        nomComplet: 'Sophie Leroy',
+        nomComplet: 'Sophie Leroy (V2)',
         email: 'sophie.leroy@example.com',
         nom: 'Leroy',
         prenom: 'Sophie',
@@ -205,7 +207,7 @@ export class FactureCreateComponent implements OnInit {
       },
       {
         id: 5,
-        nomComplet: 'Pierre Bernard',
+        nomComplet: 'Pierre Bernard (V2)',
         email: 'pierre.bernard@example.com',
         nom: 'Bernard',
         prenom: 'Pierre',
@@ -214,7 +216,7 @@ export class FactureCreateComponent implements OnInit {
       },
       {
         id: 6,
-        nomComplet: 'Lisa Moreau',
+        nomComplet: 'Lisa Moreau (V2)',
         email: 'lisa.moreau@example.com',
         nom: 'Moreau',
         prenom: 'Lisa',
@@ -259,6 +261,7 @@ export class FactureCreateComponent implements OnInit {
     console.log('✅ Données de test chargées avec succès');
   }
 
+  // ✅ AJOUT: Méthode pour réessayer le chargement
   retryLoadDonnees() {
     console.log('🔄 Nouvelle tentative de chargement...');
     this.hasError = false;
@@ -269,12 +272,15 @@ export class FactureCreateComponent implements OnInit {
   // ===== CALCULS AUTOMATIQUES =====
 
   calculerMontants() {
+    // Recalcul automatique lors de la saisie
     console.log('🔄 Recalcul des montants...');
 
+    // Convertir en nombres pour éviter les erreurs
     const montantHT = Number(this.facture.montantHT) || 0;
     const tauxTVA = Number(this.facture.tauxTVA) || 0;
     const rasTVA = Number(this.facture.rasTVA) || 0;
 
+    // Mettre à jour les valeurs dans le modèle
     this.facture.montantHT = montantHT;
     this.facture.tauxTVA = tauxTVA;
     this.facture.rasTVA = rasTVA;
@@ -298,35 +304,6 @@ export class FactureCreateComponent implements OnInit {
     const montantTVA = this.getMontantTVA();
     const rasTVA = Number(this.facture.rasTVA) || 0;
     return montantHT + montantTVA - rasTVA;
-  }
-
-  // Méthodes d'affichage des montants
-  getMontantHTDisplay(): string {
-    return (Number(this.facture.montantHT) || 0).toLocaleString('fr-MA', {
-      style: 'currency',
-      currency: 'MAD'
-    });
-  }
-
-  getMontantTVADisplay(): string {
-    return this.getMontantTVA().toLocaleString('fr-MA', {
-      style: 'currency',
-      currency: 'MAD'
-    });
-  }
-
-  getMontantTTCDisplay(): string {
-    return this.getMontantTTC().toLocaleString('fr-MA', {
-      style: 'currency',
-      currency: 'MAD'
-    });
-  }
-
-  getRasTVADisplay(): string {
-    return (Number(this.facture.rasTVA) || 0).toLocaleString('fr-MA', {
-      style: 'currency',
-      currency: 'MAD'
-    });
   }
 
   getDateEcheance(): Date | null {
@@ -362,126 +339,16 @@ export class FactureCreateComponent implements OnInit {
     const jours = this.getJoursRestants();
     if (jours === null) return '';
 
-    if (jours < 0) return 'alert-danger';
-    if (jours <= 7) return 'alert-warning';
-    return 'alert-success';
+    if (jours < 0) return 'text-danger'; // En retard
+    if (jours <= 7) return 'text-warning'; // Urgent
+    return 'text-success'; // Normal
   }
 
-  calculerEcheance() {
-    // Méthode appelée lors du changement de date ou modalité
-    console.log('📅 Recalcul de l\'échéance...');
-  }
+  // ===== ÉVÉNEMENTS DU FORMULAIRE =====
 
   onModaliteChange() {
     console.log('📅 Modalité changée:', this.facture.modalite);
-    this.calculerEcheance();
-  }
-
-  // ===== GESTION DES FICHIERS =====
-
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    this.isDragOver = true;
-  }
-
-  onDragLeave(event: DragEvent) {
-    event.preventDefault();
-    this.isDragOver = false;
-  }
-
-  onDrop(event: DragEvent) {
-    event.preventDefault();
-    this.isDragOver = false;
-
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      this.handleFileSelection(files[0]);
-    }
-  }
-
-  onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.handleFileSelection(input.files[0]);
-    }
-  }
-
-  private handleFileSelection(file: File) {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = [
-      'application/pdf',
-      'image/jpeg',
-      'image/png',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    if (file.size > maxSize) {
-      this.showError('Le fichier est trop volumineux. Taille maximum : 10 MB');
-      return;
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      this.showError('Format de fichier non supporté. Utilisez: PDF, JPG, PNG, DOC, DOCX');
-      return;
-    }
-
-    this.selectedFile = file;
-    this.facture.pieceJointe = file;
-    console.log('📎 Fichier sélectionné:', file.name, this.getFileSizeDisplay(file.size));
-  }
-
-  removeFile() {
-    this.selectedFile = null;
-    this.facture.pieceJointe = undefined;
-    if (this.fileInput) {
-      this.fileInput.nativeElement.value = '';
-    }
-    console.log('🗑️ Fichier supprimé');
-  }
-
-  getFileSizeDisplay(size: number): string {
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
-  // ===== GESTION DES UTILISATEURS =====
-
-  // Méthodes pour filtrer les utilisateurs par rôle exact
-  getValidateursV1Only(): User[] {
-    return this.validateursV1.filter(user => user.role === 'V1' && user.actif);
-  }
-
-  getValidateursV2Only(): User[] {
-    return this.validateursV2.filter(user => user.role === 'V2' && user.actif);
-  }
-
-  getTresoriersOnly(): User[] {
-    return this.tresoriers.filter(user => user.role === 'T1' && user.actif);
-  }
-
-  getSelectedValidateur1(): User | undefined {
-    return this.getValidateursV1Only().find(v => v.id === Number(this.facture.validateur1Id));
-  }
-
-  getSelectedValidateur2(): User | undefined {
-    return this.getValidateursV2Only().find(v => v.id === Number(this.facture.validateur2Id));
-  }
-
-  getSelectedTresorier(): User | undefined {
-    if (!this.facture.tresorierIdId) return undefined;
-    return this.getTresoriersOnly().find(t => t.id === Number(this.facture.tresorierIdId));
-  }
-
-  // ===== GESTION DES COMMENTAIRES =====
-
-  getCommentairesLength(): number {
-    return this.facture.commentaires?.length || 0;
-  }
-
-  updateCommentairesCount() {
-    // Méthode appelée lors de la saisie des commentaires
+    // La date d'échéance sera recalculée automatiquement via getDateEcheance()
   }
 
   // ===== VALIDATION =====
@@ -489,6 +356,7 @@ export class FactureCreateComponent implements OnInit {
   private isFormValid(): boolean {
     const errors: string[] = [];
 
+    // Validation des champs obligatoires
     if (!this.facture.nomFournisseur?.trim()) {
       errors.push('Le nom du fournisseur est obligatoire');
     }
@@ -509,6 +377,7 @@ export class FactureCreateComponent implements OnInit {
       errors.push('Un validateur V2 doit être sélectionné');
     }
 
+    // Validation des montants
     if (this.facture.tauxTVA && (this.facture.tauxTVA < 0 || this.facture.tauxTVA > 100)) {
       errors.push('Le taux de TVA doit être entre 0 et 100%');
     }
@@ -517,10 +386,12 @@ export class FactureCreateComponent implements OnInit {
       errors.push('La RAS TVA ne peut pas être négative');
     }
 
+    // Validation des validateurs (ne peuvent pas être identiques)
     if (this.facture.validateur1Id === this.facture.validateur2Id && this.facture.validateur1Id !== 0) {
       errors.push('Les validateurs V1 et V2 doivent être différents');
     }
 
+    // Validation des longueurs
     if (this.facture.nomFournisseur && this.facture.nomFournisseur.length > 200) {
       errors.push('Le nom du fournisseur ne peut pas dépasser 200 caractères');
     }
@@ -533,6 +404,7 @@ export class FactureCreateComponent implements OnInit {
       errors.push('Les commentaires ne peuvent pas dépasser 1000 caractères');
     }
 
+    // Afficher les erreurs
     if (errors.length > 0) {
       console.warn('❌ Erreurs de validation:', errors);
       this.showError('Veuillez corriger les erreurs suivantes :\n• ' + errors.join('\n• '));
@@ -549,6 +421,7 @@ export class FactureCreateComponent implements OnInit {
 
     console.log('📤 Tentative de soumission du formulaire...');
 
+    // Validation du formulaire
     if (!this.isFormValid()) {
       console.warn('⚠️ Formulaire invalide');
       return;
@@ -556,6 +429,7 @@ export class FactureCreateComponent implements OnInit {
 
     this.isSubmitting = true;
 
+    // Préparer les données pour l'envoi
     const factureData: FactureCreateDto = {
       ...this.facture,
       montantHT: Number(this.facture.montantHT),
@@ -568,6 +442,7 @@ export class FactureCreateComponent implements OnInit {
 
     console.log('📦 Données à envoyer:', factureData);
 
+    // ✅ SIMULATION DE CRÉATION EN CAS DE SERVICE INDISPONIBLE
     if (!this.factureService || !this.factureService.createFacture) {
       console.log('⚠️ Service indisponible, simulation de création...');
 
@@ -583,6 +458,7 @@ export class FactureCreateComponent implements OnInit {
       return;
     }
 
+    // Appel au service réel
     this.factureService.createFacture(factureData).subscribe({
       next: (response) => {
         console.log('✅ Facture créée avec succès:', response);
@@ -590,6 +466,7 @@ export class FactureCreateComponent implements OnInit {
 
         this.showSuccess(`Facture créée avec succès !\nNuméro: ${response.numero || 'N/A'}`);
 
+        // Redirection après un court délai
         setTimeout(() => {
           this.router.navigate(['/dashboard/default']);
         }, 1500);
@@ -616,6 +493,7 @@ export class FactureCreateComponent implements OnInit {
   onCancel() {
     console.log('❌ Demande d\'annulation...');
 
+    // Vérifier s'il y a des modifications
     const hasChanges = this.hasUnsavedChanges();
 
     if (hasChanges) {
@@ -629,32 +507,54 @@ export class FactureCreateComponent implements OnInit {
 
   // ===== MÉTHODES UTILITAIRES =====
 
+  getSelectedValidateur1(): User | undefined {
+    return this.validateursV1.find(v => v.id === Number(this.facture.validateur1Id));
+  }
+
+  getSelectedValidateur2(): User | undefined {
+    return this.validateursV2.find(v => v.id === Number(this.facture.validateur2Id));
+  }
+
+  getSelectedTresorier(): User | undefined {
+    if (!this.facture.tresorierIdId) return undefined;
+    return this.tresoriers.find(t => t.id === Number(this.facture.tresorierIdId));
+  }
+
   private hasUnsavedChanges(): boolean {
+    // Vérifier s'il y a des modifications par rapport aux valeurs initiales
     return !!(
       this.facture.nomFournisseur ||
       this.facture.montantHT > 0 ||
       this.facture.designation ||
       this.facture.commentaires ||
       this.facture.validateur1Id > 0 ||
-      this.facture.validateur2Id > 0 ||
-      this.selectedFile
+      this.facture.validateur2Id > 0
     );
   }
 
   // ===== MÉTHODES D'AFFICHAGE =====
 
   private showSuccess(message: string) {
+    // TODO: Remplacer par un système de notification plus élégant
     alert('✅ ' + message);
   }
 
   private showError(message: string) {
+    // TODO: Remplacer par un système de notification plus élégant
     alert('❌ ' + message);
   }
 
   private showInfo(message: string) {
+    // TODO: Remplacer par un système de notification plus élégant
     alert('ℹ️ ' + message);
   }
-
+// Méthode pour gérer l’upload de fichier
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.facture.pieceJointe = input.files[0];
+    }
+  }
   // ===== MÉTHODES DE DEBUG =====
 
   logCurrentState() {
@@ -663,14 +563,11 @@ export class FactureCreateComponent implements OnInit {
       hasError: this.hasError,
       errorMessage: this.errorMessage,
       facture: this.facture,
-      selectedFile: this.selectedFile,
       validateursV1Count: this.validateursV1.length,
       validateursV2Count: this.validateursV2.length,
       tresorierCount: this.tresoriers.length,
       montantTVA: this.getMontantTVA(),
-      montantTTC: this.getMontantTTC(),
-      dateEcheance: this.getDateEcheance(),
-      joursRestants: this.getJoursRestants()
+      montantTTC: this.getMontantTTC()
     });
   }
 }

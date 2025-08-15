@@ -54,7 +54,7 @@ export class AuthService {
 
   // ===== AUTHENTIFICATION =====
 
-  login(credentials: LoginRequest): Observable<AuthResponse> {
+ /* login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.API_URL}/login`, credentials)
       .pipe(
         tap(response => {
@@ -64,7 +64,7 @@ export class AuthService {
         }),
         catchError(this.handleError)
       );
-  }
+  }*/
 
   logout(): void {
     // Appel au backend pour le logout
@@ -223,7 +223,24 @@ export class AuthService {
   isAdmin(): boolean {
     return this.hasRole('ADMIN');
   }
+  login(credentials: LoginRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.API_URL}/login`, credentials)
+      .pipe(
+        tap(response => {
+          console.log('🔐 Réponse de connexion:', response);
 
+          if (response.success && response.token) {
+            // ✅ SAUVEGARDER LE TOKEN
+            localStorage.setItem(this.TOKEN_KEY, response.token);
+            localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
+            this.currentUserSubject.next(response.user);
+
+            console.log('✅ Token sauvegardé:', response.token.substring(0, 20) + '...');
+          }
+        }),
+        catchError(this.handleError)
+      );
+  }
   // ===== GESTION D'ERREURS =====
 
   private handleError(error: any): Observable<never> {
@@ -247,4 +264,5 @@ export class AuthService {
 
     return throwError(() => new Error(errorMessage));
   }
+
 }

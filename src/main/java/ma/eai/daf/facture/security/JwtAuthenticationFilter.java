@@ -14,8 +14,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
+
+@Component // ✅ AJOUTER @Component
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -28,11 +29,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        // ✅ AJOUTER DES LOGS DE DEBUG
+        log.debug("=== JWT FILTER EXECUTÉ ===");
+        log.debug("URI: {}", request.getRequestURI());
+        log.debug("Method: {}", request.getMethod());
+
         try {
             String jwt = getJwtFromRequest(request);
+            log.debug("Token JWT extrait: {}", jwt != null ? "Présent" : "Absent");
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                log.debug("Username extrait du token: {}", username);
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -40,9 +49,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("Authentification réussie pour: {}", username);
             }
         } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
+            log.error("Erreur lors de l'authentification JWT", ex);
         }
 
         filterChain.doFilter(request, response);
@@ -50,6 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
+        log.debug("Header Authorization: {}", bearerToken);
+
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }

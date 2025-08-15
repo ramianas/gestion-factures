@@ -55,26 +55,33 @@ public class FactureController {
     // ===== ENDPOINTS POUR U1 (Saisie) =====
 
     @GetMapping("/donnees-reference")
-    //@PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> getDonneesReferenceSaisie() {
         try {
+            log.info("📋 Récupération des données de référence");
+
+            List<User> validateursV1 = userService.getValidateursV1();
+            List<User> validateursV2 = userService.getValidateursV2();
+            List<User> tresoriers = userService.getTresoriers();
+
+            log.info("📊 Trouvé: {} V1, {} V2, {} trésoriers",
+                    validateursV1.size(), validateursV2.size(), tresoriers.size());
+
             Map<String, Object> donnees = Map.of(
-                    "validateursV1", userService.getValidateursV1().stream()
+                    "validateursV1", validateursV1.stream()
                             .map(this::mapUserForSelection)
                             .toList(),
-                    "validateursV2", userService.getValidateursV2().stream()
+                    "validateursV2", validateursV2.stream()
                             .map(this::mapUserForSelection)
                             .toList(),
-                    "tresoriers", userService.getTresoriers().stream()
+                    "tresoriers", tresoriers.stream()
                             .map(this::mapUserForSelection)
                             .toList()
             );
 
-            log.debug("Données de référence récupérées avec succès");
             return ResponseEntity.ok(donnees);
-
         } catch (Exception e) {
-            log.error("Erreur lors de la récupération des données de référence", e);
+            log.error("❌ Erreur récupération données de référence", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     createErrorResponse("Erreur lors de la récupération des données de référence")
             );
@@ -82,7 +89,7 @@ public class FactureController {
     }
 
     @PostMapping
-    //@PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> createFacture(
             @Valid @RequestBody FactureCreateDto factureDto,
             Authentication authentication) {
@@ -119,7 +126,7 @@ public class FactureController {
     }
 
     @GetMapping("/mes-factures")
-   // @PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<List<Map<String, Object>>> getMesFactures(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -139,7 +146,7 @@ public class FactureController {
     }
 
     @PutMapping("/{id}")
-   // @PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> updateFacture(
             @PathVariable Long id,
             @Valid @RequestBody FactureUpdateDto factureUpdateDto,
@@ -182,7 +189,7 @@ public class FactureController {
     }
 
     @PostMapping("/{id}/soumettre-v1")
-   // @PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> soumettreValidationV1(
             @PathVariable Long id,
             Authentication authentication) {
@@ -218,7 +225,7 @@ public class FactureController {
     // ===== ENDPOINTS POUR V1 (Validation Niveau 1) =====
 
     @GetMapping("/en-attente-v1")
-   // @PreAuthorize("hasAuthority('ROLE_V1')")
+    @PreAuthorize("hasAuthority('ROLE_V1')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteV1(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -235,7 +242,7 @@ public class FactureController {
     }
 
     @PostMapping("/{id}/valider-v1")
-   // @PreAuthorize("hasAuthority('ROLE_V1')")
+    @PreAuthorize("hasAuthority('ROLE_V1')")
     public ResponseEntity<Map<String, Object>> validerParV1(
             @PathVariable Long id,
             @Valid @RequestBody ValidationDto validationDto,
@@ -269,7 +276,7 @@ public class FactureController {
     // ===== ENDPOINTS POUR V2 (Validation Niveau 2) =====
 
     @GetMapping("/en-attente-v2")
-   // @PreAuthorize("hasAuthority('ROLE_V2')")
+    @PreAuthorize("hasAuthority('ROLE_V2')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteV2(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -286,7 +293,7 @@ public class FactureController {
     }
 
     @PostMapping("/{id}/valider-v2")
-  //  @PreAuthorize("hasAuthority('ROLE_V2')")
+    @PreAuthorize("hasAuthority('ROLE_V2')")
     public ResponseEntity<Map<String, Object>> validerParV2(
             @PathVariable Long id,
             @Valid @RequestBody ValidationDto validationDto,
@@ -320,7 +327,7 @@ public class FactureController {
     // ===== ENDPOINTS POUR T1 (Trésorerie) =====
 
     @GetMapping("/en-attente-tresorerie")
-   // @PreAuthorize("hasAuthority('ROLE_T1')")
+    @PreAuthorize("hasAuthority('ROLE_T1')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteTresorerie(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -337,7 +344,7 @@ public class FactureController {
     }
 
     @PostMapping("/{id}/payer")
-   // @PreAuthorize("hasAuthority('ROLE_T1')")
+    @PreAuthorize("hasAuthority('ROLE_T1')")
     public ResponseEntity<Map<String, Object>> payerFacture(
             @PathVariable Long id,
             @Valid @RequestBody PaiementDto paiementDto,
@@ -371,7 +378,7 @@ public class FactureController {
     // ===== ENDPOINTS COMMUNS =====
 
     @GetMapping("/{id}")
-  //  @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> getFactureById(@PathVariable Long id) {
         try {
             return factureService.getFactureById(id)
@@ -389,7 +396,7 @@ public class FactureController {
     }
 
     @GetMapping("/mes-taches")
-   // @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
+    @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1')")
     public ResponseEntity<List<Map<String, Object>>> getMesTaches(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -406,7 +413,7 @@ public class FactureController {
     }
 
     @GetMapping("/urgentes")
-   // @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesUrgentes() {
         try {
             List<Facture> factures = factureService.getFacturesUrgentes();
@@ -422,7 +429,7 @@ public class FactureController {
     }
 
     @GetMapping("/en-retard")
-   // @PreAuthorize("hasAnyAuthority('ROLE_T1', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnRetard() {
         try {
             List<Facture> factures = factureService.getFacturesEnRetard();
@@ -438,7 +445,7 @@ public class FactureController {
     }
 
     @GetMapping("/tableau-bord")
-   // @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_U1', 'ROLE_V1', 'ROLE_V2', 'ROLE_T1', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> getTableauBord(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
@@ -468,7 +475,7 @@ public class FactureController {
     }
 
     @DeleteMapping("/{id}")
-   // @PreAuthorize("hasAuthority('ROLE_U1')")
+    @PreAuthorize("hasAuthority('ROLE_U1')")
     public ResponseEntity<Map<String, Object>> deleteFacture(
             @PathVariable Long id,
             Authentication authentication) {

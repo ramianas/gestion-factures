@@ -274,7 +274,7 @@ $background-light: #FAFAFA;
 
 // === Informations Échéance ===
 .echeance-info {
-  margin-top: 20px;
+  margin-top: 1rem;
 
   .alert {
     border-radius: 8px;
@@ -357,6 +357,57 @@ $background-light: #FAFAFA;
     color: $text-primary;
     font-weight: 500;
     cursor: pointer;
+  }
+}
+
+// === File Upload Area ===
+.file-upload-container {
+  .file-upload-area {
+    border: 2px dashed $border-color;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: white;
+
+    &:hover {
+      border-color: $primary-color;
+      background-color: $primary-light;
+    }
+
+    &.dragover {
+      border-color: $success-color;
+      background-color: #f6ffed;
+      transform: scale(1.02);
+    }
+
+    i {
+      color: $primary-color;
+      margin-bottom: 1rem;
+    }
+
+    h6 {
+      color: $text-primary;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: $text-secondary;
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+
+  .alert {
+    border-radius: 8px;
+
+    .btn {
+      border-radius: 6px;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
   }
 }
 
@@ -473,6 +524,20 @@ $background-light: #FAFAFA;
   color: $danger-color !important;
 }
 
+// === Debug Panel ===
+.debug-panel {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+  font-size: 0.85rem;
+
+  .btn-outline-secondary {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+}
+
 // === Responsive Design ===
 @media (max-width: 768px) {
   .facture-create-container {
@@ -506,6 +571,15 @@ $background-light: #FAFAFA;
       align-items: center;
     }
   }
+
+  // Styles pour les cartes
+  .card {
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+  }
 }
 
 // === Animation pour les transitions ===
@@ -526,6 +600,10 @@ $background-light: #FAFAFA;
 
 .user-info {
   animation: fadeIn 0.3s ease-out;
+}
+
+.file-upload-area {
+  animation: fadeIn 0.4s ease-out;
 }
 
 // === States spéciaux ===
@@ -565,12 +643,45 @@ $background-light: #FAFAFA;
 // === Print Styles ===
 @media print {
   .action-buttons,
-  .page-header .header-actions {
+  .page-header .header-actions,
+  .debug-panel {
     display: none !important;
   }
 
   .form-section {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+}
+
+// === Focus States et Accessibility ===
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+  outline: 2px solid $primary-color;
+  outline-offset: 2px;
+}
+
+.file-upload-area:focus {
+  outline: 2px solid $primary-color;
+  outline-offset: 2px;
+}
+
+// === Custom Scrollbar ===
+.form-section {
+  scrollbar-width: thin;
+  scrollbar-color: $primary-color transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $primary-color;
+    border-radius: 3px;
   }
 }

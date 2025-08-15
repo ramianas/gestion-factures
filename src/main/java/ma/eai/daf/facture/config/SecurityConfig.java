@@ -33,8 +33,6 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    // ✅ SUPPRIMÉ : PasswordEncoder bean (maintenant dans PasswordEncoderConfig)
-
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
@@ -48,7 +46,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(authz -> authz
-                        // ===== ENDPOINTS PUBLICS =====
+                        // ===== ENDPOINTS PUBLICS (ORDRE IMPORTANT : PLUS SPÉCIFIQUE D'ABORD) =====
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -57,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/factures/test/**").permitAll()
                         .requestMatchers("/api/factures/**/test").permitAll()
                         .requestMatchers("/api/factures/**-test").permitAll()
+                        .requestMatchers("/api/test/**").permitAll()
 
                         // ===== SWAGGER / API DOCS =====
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
@@ -64,7 +63,7 @@ public class SecurityConfig {
                         // ===== ENDPOINTS ADMIN UNIQUEMENT =====
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // ===== ENDPOINTS FACTURES =====
+                        // ===== ENDPOINTS FACTURES PAR RÔLE =====
                         // Création et modification de factures (U1 uniquement)
                         .requestMatchers(HttpMethod.POST, "/api/factures").hasRole("U1")
                         .requestMatchers(HttpMethod.PUT, "/api/factures/**").hasRole("U1")
@@ -103,7 +102,7 @@ public class SecurityConfig {
                         // ===== ENDPOINTS NOTIFICATIONS =====
                         .requestMatchers("/api/notifications/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
 
-                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION =====
+                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION (DOIT ÊTRE EN DERNIER) =====
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

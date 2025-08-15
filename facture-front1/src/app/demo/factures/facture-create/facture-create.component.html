@@ -1,3 +1,5 @@
+<!-- facture-front1/src/app/demo/factures/facture-create/facture-create.component.html -->
+
 <div class="facture-create-container">
   <!-- État de chargement -->
   <div *ngIf="isLoading" class="loading-container">
@@ -9,12 +11,12 @@
     </div>
   </div>
 
-  <!-- Message en cas d’erreur lors du chargement -->
+  <!-- Message en cas d'erreur lors du chargement -->
   <div *ngIf="hasError && !isLoading" class="alert alert-warning alert-dismissible mb-4" role="alert">
     <div class="d-flex align-items-center">
       <i class="fas fa-exclamation-triangle me-3"></i>
       <div class="flex-grow-1">
-        <strong>Information :</strong> {{ errorMessage }}
+        <strong>Information :</strong> {{ errorMessage }}
         <br />
         <small>Le formulaire fonctionne avec des données par défaut.</small>
       </div>
@@ -25,8 +27,27 @@
     </div>
   </div>
 
-  <!-- Contenu principal : s’affiche une fois le chargement terminé -->
+  <!-- Contenu principal -->
   <div *ngIf="!isLoading" class="main-content">
+    <!-- En-tête -->
+    <div class="page-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="page-title">
+            <i class="fas fa-file-invoice me-2"></i>
+            Création d'une Nouvelle Facture
+          </h2>
+          <p class="page-subtitle">Remplissez tous les champs obligatoires pour créer votre facture</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="onCancel()">
+            <i class="fas fa-times me-1"></i>
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Panneau de debug (facultatif) -->
     <div class="debug-panel mb-3" style="background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px dashed #dee2e6;">
       <small class="text-muted">
@@ -40,74 +61,531 @@
       </small>
     </div>
 
-    <!-- Carte contenant le formulaire de création -->
-    <app-card cardTitle="Création facture" [showContent]="true">
-      <form #factureForm="ngForm" (ngSubmit)="onSubmit()" novalidate>
-        <!-- Champ : Nom du fournisseur -->
-        <div class="mb-3">
-          <label for="nomFournisseur" class="form-label">Nom du fournisseur</label>
-          <input
-            type="text"
-            id="nomFournisseur"
-            class="form-control"
-            name="nomFournisseur"
-            [(ngModel)]="facture.nomFournisseur"
-            required
-          />
+    <form #factureForm="ngForm" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Section Fournisseur -->
+      <div class="form-section">
+        <app-card cardTitle="Informations Fournisseur" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-building me-2"></i>
+          </ng-template>
+
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="nomFournisseur" class="form-label required">Nom du fournisseur</label>
+                <input
+                  type="text"
+                  id="nomFournisseur"
+                  class="form-control"
+                  name="nomFournisseur"
+                  [(ngModel)]="facture.nomFournisseur"
+                  #nomFournisseurField="ngModel"
+                  required
+                  maxlength="200"
+                  placeholder="Saisissez le nom du fournisseur"
+                  [class.is-invalid]="nomFournisseurField.invalid && nomFournisseurField.touched"
+                />
+                <div class="invalid-feedback" *ngIf="nomFournisseurField.invalid && nomFournisseurField.touched">
+                  Le nom du fournisseur est obligatoire
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="formeJuridique" class="form-label">Forme juridique</label>
+                <select
+                  id="formeJuridique"
+                  class="form-select"
+                  name="formeJuridique"
+                  [(ngModel)]="facture.formeJuridique"
+                >
+                  <option value="">Sélectionnez...</option>
+                  <option value="SARL">SARL</option>
+                  <option value="SAS">SAS</option>
+                  <option value="SA">SA</option>
+                  <option value="EURL">EURL</option>
+                  <option value="SNC">SNC</option>
+                  <option value="ENTREPRISE_INDIVIDUELLE">Entreprise Individuelle</option>
+                  <option value="MICRO_ENTREPRISE">Micro-entreprise</option>
+                  <option value="ASSOCIATION">Association</option>
+                  <option value="AUTRE">Autre</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Dates -->
+      <div class="form-section">
+        <app-card cardTitle="Dates" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-calendar me-2"></i>
+          </ng-template>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="dateFacture" class="form-label required">Date de facture</label>
+                <input
+                  type="date"
+                  id="dateFacture"
+                  class="form-control"
+                  name="dateFacture"
+                  [(ngModel)]="facture.dateFacture"
+                  #dateFactureField="ngModel"
+                  required
+                  (change)="calculerEcheance()"
+                  [class.is-invalid]="dateFactureField.invalid && dateFactureField.touched"
+                />
+                <div class="invalid-feedback" *ngIf="dateFactureField.invalid && dateFactureField.touched">
+                  La date de facture est obligatoire
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="dateReception" class="form-label">Date de réception</label>
+                <input
+                  type="date"
+                  id="dateReception"
+                  class="form-control"
+                  name="dateReception"
+                  [(ngModel)]="facture.dateReception"
+                />
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="dateLivraison" class="form-label">Date de livraison</label>
+                <input
+                  type="date"
+                  id="dateLivraison"
+                  class="form-control"
+                  name="dateLivraison"
+                  [(ngModel)]="facture.dateLivraison"
+                />
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Montants -->
+      <div class="form-section">
+        <app-card cardTitle="Montants" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-euro-sign me-2"></i>
+          </ng-template>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="montantHT" class="form-label required">Montant HT</label>
+                <div class="input-group">
+                  <input
+                    type="number"
+                    id="montantHT"
+                    class="form-control"
+                    name="montantHT"
+                    [(ngModel)]="facture.montantHT"
+                    #montantHTField="ngModel"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    (input)="calculerMontants()"
+                    [class.is-invalid]="montantHTField.invalid && montantHTField.touched"
+                  />
+                  <span class="input-group-text">MAD</span>
+                </div>
+                <div class="invalid-feedback" *ngIf="montantHTField.invalid && montantHTField.touched">
+                  Le montant HT doit être positif
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="tauxTVA" class="form-label">Taux TVA</label>
+                <div class="input-group">
+                  <input
+                    type="number"
+                    id="tauxTVA"
+                    class="form-control"
+                    name="tauxTVA"
+                    [(ngModel)]="facture.tauxTVA"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="20.00"
+                    (input)="calculerMontants()"
+                  />
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="rasTVA" class="form-label">RAS TVA</label>
+                <div class="input-group">
+                  <input
+                    type="number"
+                    id="rasTVA"
+                    class="form-control"
+                    name="rasTVA"
+                    [(ngModel)]="facture.rasTVA"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    (input)="calculerMontants()"
+                  />
+                  <span class="input-group-text">MAD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Récapitulatif des montants -->
+          <div class="montant-summary">
+            <div class="row">
+              <div class="col-md-6 offset-md-6">
+                <div class="summary-card">
+                  <div class="summary-row">
+                    <span class="summary-label">Montant HT:</span>
+                    <span class="summary-value">{{ getMontantHTDisplay() }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">TVA:</span>
+                    <span class="summary-value">{{ getMontantTVADisplay() }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">RAS TVA:</span>
+                    <span class="summary-value">{{ getRasTVADisplay() }}</span>
+                  </div>
+                  <div class="summary-row total">
+                    <span class="summary-label">Montant TTC:</span>
+                    <span class="summary-value">{{ getMontantTTCDisplay() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Modalités et Références -->
+      <div class="form-section">
+        <app-card cardTitle="Modalités et Références" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-file-contract me-2"></i>
+          </ng-template>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="modalite" class="form-label">Modalité de paiement</label>
+                <select
+                  id="modalite"
+                  class="form-select"
+                  name="modalite"
+                  [(ngModel)]="facture.modalite"
+                  (change)="onModaliteChange()"
+                >
+                  <option value="">Sélectionnez...</option>
+                  <option value="DELAI_30">30 jours</option>
+                  <option value="DELAI_60">60 jours</option>
+                  <option value="DELAI_90">90 jours</option>
+                  <option value="DELAI_120">120 jours</option>
+                </select>
+                <div class="echeance-info" *ngIf="getDateEcheance()">
+                  <div class="alert mt-2" [ngClass]="getJoursRestantsClass()">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <strong>Échéance:</strong> {{ getDateEcheance() | date:'dd/MM/yyyy' }}
+                    <span *ngIf="getJoursRestants() !== null">
+                      (dans {{ getJoursRestants() }} jours)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="refCommande" class="form-label">Référence commande</label>
+                <input
+                  type="text"
+                  id="refCommande"
+                  class="form-control"
+                  name="refCommande"
+                  [(ngModel)]="facture.refCommande"
+                  maxlength="100"
+                  placeholder="Référence de la commande"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="periode" class="form-label">Période</label>
+                <input
+                  type="text"
+                  id="periode"
+                  class="form-control"
+                  name="periode"
+                  [(ngModel)]="facture.periode"
+                  maxlength="50"
+                  placeholder="Ex: Janvier 2025"
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="etrangerLocal" class="form-label">Étranger/Local</label>
+                <select
+                  id="etrangerLocal"
+                  class="form-select"
+                  name="etrangerLocal"
+                  [(ngModel)]="facture.etrangerLocal"
+                >
+                  <option value="">Sélectionnez...</option>
+                  <option value="LOCAL">Local</option>
+                  <option value="ETRANGER">Étranger</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="mb-3">
+                <label for="designation" class="form-label">Désignation</label>
+                <textarea
+                  id="designation"
+                  class="form-control"
+                  name="designation"
+                  [(ngModel)]="facture.designation"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="Description des biens/services facturés"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  id="refacturable"
+                  class="form-check-input"
+                  name="refacturable"
+                  [(ngModel)]="facture.refacturable"
+                />
+                <label class="form-check-label" for="refacturable">
+                  Cette facture est refacturable
+                </label>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Validateurs -->
+      <div class="form-section">
+        <app-card cardTitle="Assignation des Validateurs" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-user-check me-2"></i>
+          </ng-template>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="validateur1" class="form-label required">Validateur Niveau 1</label>
+                <select
+                  id="validateur1"
+                  class="form-select"
+                  name="validateur1Id"
+                  [(ngModel)]="facture.validateur1Id"
+                  #validateur1Field="ngModel"
+                  required
+                  [class.is-invalid]="validateur1Field.invalid && validateur1Field.touched"
+                >
+                  <option value="">Sélectionnez un validateur V1...</option>
+                  <option *ngFor="let v1 of getValidateursV1Only()" [value]="v1.id">
+                    {{ v1.nomComplet }} ({{ v1.email }})
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="validateur1Field.invalid && validateur1Field.touched">
+                  Un validateur V1 doit être sélectionné
+                </div>
+                <div class="user-info" *ngIf="getSelectedValidateur1()">
+                  <div class="user-card">
+                    <i class="fas fa-user text-primary"></i>
+                    <strong>{{ getSelectedValidateur1()?.nomComplet }}</strong><br>
+                    <small class="text-muted">{{ getSelectedValidateur1()?.email }}</small><br>
+                    <small class="text-info">Sera notifié automatiquement</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="validateur2" class="form-label required">Validateur Niveau 2</label>
+                <select
+                  id="validateur2"
+                  class="form-select"
+                  name="validateur2Id"
+                  [(ngModel)]="facture.validateur2Id"
+                  #validateur2Field="ngModel"
+                  required
+                  [class.is-invalid]="validateur2Field.invalid && validateur2Field.touched"
+                >
+                  <option value="">Sélectionnez un validateur V2...</option>
+                  <option *ngFor="let v2 of getValidateursV2Only()" [value]="v2.id">
+                    {{ v2.nomComplet }} ({{ v2.email }})
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="validateur2Field.invalid && validateur2Field.touched">
+                  Un validateur V2 doit être sélectionné
+                </div>
+                <div class="user-info" *ngIf="getSelectedValidateur2()">
+                  <div class="user-card">
+                    <i class="fas fa-user text-primary"></i>
+                    <strong>{{ getSelectedValidateur2()?.nomComplet }}</strong><br>
+                    <small class="text-muted">{{ getSelectedValidateur2()?.email }}</small><br>
+                    <small class="text-info">Sera notifié après validation V1</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="tresorier" class="form-label">Trésorier (optionnel)</label>
+                <select
+                  id="tresorier"
+                  class="form-select"
+                  name="tresorierIdId"
+                  [(ngModel)]="facture.tresorierIdId"
+                >
+                  <option value="">Assignation automatique...</option>
+                  <option *ngFor="let tresorier of getTresoriersOnly()" [value]="tresorier.id">
+                    {{ tresorier.nomComplet }} ({{ tresorier.email }})
+                  </option>
+                </select>
+                <div class="user-info" *ngIf="getSelectedTresorier()">
+                  <div class="user-card">
+                    <i class="fas fa-coins text-warning"></i>
+                    <strong>{{ getSelectedTresorier()?.nomComplet }}</strong><br>
+                    <small class="text-muted">{{ getSelectedTresorier()?.email }}</small><br>
+                    <small class="text-info">Sera notifié après validation V2</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Pièce Jointe -->
+      <div class="form-section">
+        <app-card cardTitle="Pièce Jointe" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-paperclip me-2"></i>
+          </ng-template>
+
+          <div class="file-upload-container">
+            <div class="file-upload-area"
+                 [class.dragover]="isDragOver"
+                 (click)="fileInput.click()"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onDrop($event)">
+              <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+              <h6>Glissez-déposez votre fichier ici ou cliquez pour sélectionner</h6>
+              <p class="text-muted">Formats acceptés: PDF, JPG, PNG, DOC, DOCX (Max: 10 MB)</p>
+            </div>
+
+            <input #fileInput
+                   type="file"
+                   class="d-none"
+                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                   (change)="onFileSelected($event)" />
+
+            <div *ngIf="selectedFile" class="mt-3">
+              <div class="alert alert-success">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Fichier sélectionné:</strong> {{ selectedFile.name }}
+                    <br>
+                    <small class="text-muted">
+                      Taille: {{ getFileSizeDisplay(selectedFile.size) }} -
+                      Type: {{ selectedFile.type }}
+                    </small>
+                  </div>
+                  <button type="button"
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="removeFile()">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Section Commentaires -->
+      <div class="form-section">
+        <app-card cardTitle="Commentaires" [showContent]="true">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-comment me-2"></i>
+          </ng-template>
+
+          <div class="mb-3">
+            <label for="commentaires" class="form-label">Commentaires (optionnel)</label>
+            <textarea
+              id="commentaires"
+              class="form-control"
+              name="commentaires"
+              [(ngModel)]="facture.commentaires"
+              rows="4"
+              maxlength="1000"
+              placeholder="Ajoutez des commentaires ou des instructions particulières..."
+              (input)="updateCommentairesCount()"
+            ></textarea>
+            <div class="form-text">
+              <span [id]="'commentairesCount'">{{ getCommentairesLength() }}</span>/1000 caractères
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="action-buttons">
+        <div class="d-flex justify-content-center gap-3">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  (click)="onCancel()"
+                  [disabled]="isSubmitting">
+            <i class="fas fa-times me-2"></i>
+            Annuler
+          </button>
+          <button type="button"
+                  class="btn btn-outline-primary"
+                  (click)="onSaveDraft()"
+                  [disabled]="isSubmitting">
+            <i class="fas fa-save me-2"></i>
+            Sauvegarder brouillon
+          </button>
+          <button type="submit"
+                  class="btn btn-primary"
+                  [disabled]="factureForm.invalid || isSubmitting">
+            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!isSubmitting" class="fas fa-paper-plane me-2"></i>
+            {{ isSubmitting ? 'Création en cours...' : 'Créer la facture' }}
+          </button>
         </div>
-
-        <!-- Champ : Date de facture -->
-        <div class="mb-3">
-          <label for="dateFacture" class="form-label">Date de facture</label>
-          <input
-            type="date"
-            id="dateFacture"
-            class="form-control"
-            name="dateFacture"
-            [(ngModel)]="facture.dateFacture"
-            required
-          />
-        </div>
-
-        <!-- Champ : Montant HT -->
-        <div class="mb-3">
-          <label for="montantHT" class="form-label">Montant HT</label>
-          <input
-            type="number"
-            id="montantHT"
-            class="form-control"
-            name="montantHT"
-            [(ngModel)]="facture.montantHT"
-            required
-          />
-        </div>
-
-        <!-- Champ : Validateur niveau 1 -->
-        <div class="mb-3">
-          <label for="validateur1" class="form-label">Validateur niveau 1</label>
-          <select
-            id="validateur1"
-            class="form-select"
-            name="validateur1Id"
-            [(ngModel)]="facture.validateur1Id"
-            required
-          >
-            <option *ngFor="let v1 of validateursV1" [value]="v1.id">
-              {{ v1.nomComplet }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Ajoutez ici vos autres champs (validateur V2, trésorier, commentaires…) -->
-
-        <button
-          type="submit"
-          class="btn btn-primary"
-          [disabled]="factureForm.invalid || isSubmitting"
-        >
-          Créer la facture
-        </button>
-      </form>
-    </app-card>
+      </div>
+    </form>
   </div>
 </div>

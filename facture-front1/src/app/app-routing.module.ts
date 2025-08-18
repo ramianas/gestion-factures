@@ -84,7 +84,7 @@ const routes: Routes = [
       // ===== ROUTES NOTIFICATIONS =====
       {
         path: 'notifications',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/notifications/notifications.component').then((c) => c.NotificationsComponent),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['U1', 'V1', 'V2', 'T1', 'ADMIN'] } // Tous les rôles connectés
       },

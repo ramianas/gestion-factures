@@ -14,6 +14,7 @@ import { ErrorInterceptor } from './app/interceptors/error.interceptor';
 
 // Import des services
 import { AuthService } from './app/services/auth.service';
+import {jwtInterceptor} from "./app/interceptors/jwt.interceptor";
 
 if (environment.production) {
   enableProdMode();
@@ -24,6 +25,7 @@ bootstrapApplication(AppComponent, {
     importProvidersFrom(BrowserModule, AppRoutingModule),
     provideAnimations(),
     provideHttpClient(),
+    provideHttpClient(withInterceptors([jwtInterceptor])),
 
     // Configuration des interceptors HTTP
     {

@@ -167,7 +167,12 @@ public class UserService {
     public List<User> searchUsers(String terme) {
         return userRepository.findByNomOrPrenomContaining(terme);
     }
+// Ajout à UserService.java
+// Ajoutez cette méthode dans votre UserService
 
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
     // ===== STATISTIQUES =====
 
     public long countUsersByRole(RoleType role) {

@@ -2,7 +2,7 @@
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
@@ -26,7 +26,11 @@ export interface UpdateProfileRequest {
   nom: string;
   prenom: string;
   email: string;
-  nouveauMotDePasse?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 @Injectable({
@@ -49,14 +53,27 @@ export class UserProfileService {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
-        if (response.success) {
-          return response.user;
+        console.log('Response from /auth/me:', response);
+        if (response.success && response.user) {
+          return {
+            id: response.user.id,
+            nom: response.user.nom || '',
+            prenom: response.user.prenom || '',
+            email: response.user.email || '',
+            nomComplet: response.user.nomComplet || response.user.nom || '',
+            role: response.user.role || '',
+            actif: response.user.actif || false,
+            nbFacturesCreees: response.user.nbFacturesCreees || 0,
+            nbFacturesValideesN1: response.user.nbFacturesValideesN1 || 0,
+            nbFacturesValideesN2: response.user.nbFacturesValideesN2 || 0,
+            nbFacturesTraitees: response.user.nbFacturesTraitees || 0
+          } as UserProfile;
         }
         throw new Error(response.message || 'Erreur lors de la récupération du profil');
       }),
       catchError(error => {
         console.error('Erreur getUserProfile:', error);
-        throw error;
+        return throwError(() => error);
       })
     );
   }
@@ -66,21 +83,36 @@ export class UserProfileService {
   updateProfile(profileData: UpdateProfileRequest): Observable<any> {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) {
-      throw new Error('Utilisateur non connecté');
+      return throwError(() => new Error('Utilisateur non connecté'));
     }
 
-    return this.http.put<any>(`${this.apiUrl}/${currentUser.id}`, profileData, {
+    const updateData = {
+      nom: profileData.nom,
+      prenom: profileData.prenom,
+      email: profileData.email,
+      role: currentUser.role, // Conserver le rôle actuel
+      actif: true // Conserver le statut actif
+    };
+
+    return this.http.put<any>(`${this.apiUrl}/${currentUser.id}`, updateData, {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
+        console.log('Response from update profile:', response);
         if (response.success) {
+          // Mettre à jour les informations dans le service d'authentification
+          const updatedUser = { ...currentUser, ...profileData };
+          this.authService.setCurrentUser(updatedUser);
           return response;
         }
         throw new Error(response.message || 'Erreur lors de la mise à jour du profil');
       }),
       catchError(error => {
         console.error('Erreur updateProfile:', error);
-        throw error;
+        if (error.status === 400 && error.error?.message) {
+          return throwError(() => new Error(error.error.message));
+        }
+        return throwError(() => new Error('Erreur lors de la mise à jour du profil'));
       })
     );
   }
@@ -88,7 +120,7 @@ export class UserProfileService {
   // ===== CHANGEMENT DE MOT DE PASSE =====
 
   changePassword(currentPassword: string, newPassword: string): Observable<any> {
-    const changePasswordData = {
+    const changePasswordData: ChangePasswordRequest = {
       currentPassword,
       newPassword
     };
@@ -97,6 +129,7 @@ export class UserProfileService {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
+        console.log('Response from change password:', response);
         if (response.success) {
           return response;
         }
@@ -104,31 +137,10 @@ export class UserProfileService {
       }),
       catchError(error => {
         console.error('Erreur changePassword:', error);
-        throw error;
-      })
-    );
-  }
-
-  // ===== STATISTIQUES UTILISATEUR =====
-
-  getUserStatistics(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/me/statistics`, {
-      headers: this.getAuthHeaders()
-    }).pipe(
-      catchError(error => {
-        console.error('Erreur getUserStatistics:', error);
-        // Retourner des statistiques par défaut en cas d'erreur
-        return new Observable(observer => {
-          observer.next({
-            facturesCreees: 0,
-            facturesValideesN1: 0,
-            facturesValideesN2: 0,
-            facturesTraitees: 0,
-            tauxValidation: 0,
-            moyenneTraitement: 0
-          });
-          observer.complete();
-        });
+        if (error.status === 400 && error.error?.message) {
+          return throwError(() => new Error(error.error.message));
+        }
+        return throwError(() => new Error('Erreur lors du changement de mot de passe'));
       })
     );
   }
@@ -189,25 +201,25 @@ export class UserProfileService {
     return roleLabels[role] || role;
   }
 
-  formatStatistics(stats: any): any {
+  formatStatistics(user: UserProfile): any {
     return {
-      totalFactures: (stats.nbFacturesCreees || 0) +
-        (stats.nbFacturesValideesN1 || 0) +
-        (stats.nbFacturesValideesN2 || 0) +
-        (stats.nbFacturesTraitees || 0),
-      facturesCreees: stats.nbFacturesCreees || 0,
-      facturesValideesN1: stats.nbFacturesValideesN1 || 0,
-      facturesValideesN2: stats.nbFacturesValideesN2 || 0,
-      facturesTraitees: stats.nbFacturesTraitees || 0,
-      tauxActivite: this.calculateActivityRate(stats)
+      totalFactures: (user.nbFacturesCreees || 0) +
+        (user.nbFacturesValideesN1 || 0) +
+        (user.nbFacturesValideesN2 || 0) +
+        (user.nbFacturesTraitees || 0),
+      facturesCreees: user.nbFacturesCreees || 0,
+      facturesValideesN1: user.nbFacturesValideesN1 || 0,
+      facturesValideesN2: user.nbFacturesValideesN2 || 0,
+      facturesTraitees: user.nbFacturesTraitees || 0,
+      tauxActivite: this.calculateActivityRate(user)
     };
   }
 
-  private calculateActivityRate(stats: any): number {
-    const total = (stats.nbFacturesCreees || 0) +
-      (stats.nbFacturesValideesN1 || 0) +
-      (stats.nbFacturesValideesN2 || 0) +
-      (stats.nbFacturesTraitees || 0);
+  private calculateActivityRate(user: UserProfile): number {
+    const total = (user.nbFacturesCreees || 0) +
+      (user.nbFacturesValideesN1 || 0) +
+      (user.nbFacturesValideesN2 || 0) +
+      (user.nbFacturesTraitees || 0);
 
     if (total === 0) return 0;
 

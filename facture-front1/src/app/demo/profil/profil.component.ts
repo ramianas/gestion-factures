@@ -9,15 +9,18 @@ import { Subject, takeUntil } from 'rxjs';
 import { CardComponent } from 'src/app/theme/shared/components/card/card.component';
 
 // Import des services
-import { AuthService, User } from '../../../services/auth.service';
-import { UserProfileService, UserProfile, UpdateProfileRequest } from '../services/user-profile.service';
+import { AuthService, User } from '/Users/macm2/Downloads/facture/facture-front1/src/app/services/auth.service';
+import { UserProfileService, UserProfile, UpdateProfileRequest } from '/Users/macm2/Downloads/facture/facture-front1/src/app/demo/profil/services/user-profile.service';
+
+export let ProfilComponent = undefined;
+
 
 @Component({
   selector: 'app-mon-profil',
   standalone: true,
   imports: [CommonModule, FormsModule, CardComponent],
-  templateUrl: './mon-profil.component.html',
-  styleUrl: './mon-profil.component.scss'
+  templateUrl: './profil.component.html',
+  styleUrl: './profil.component.scss'
 })
 export class MonProfilComponent implements OnInit, OnDestroy {
 
@@ -65,7 +68,7 @@ export class MonProfilComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    console.log('MonProfilComponent initialized');
+    console.log('🔧 Initialisation du composant Mon Profil');
     this.loadUserProfile();
   }
 
@@ -77,26 +80,53 @@ export class MonProfilComponent implements OnInit, OnDestroy {
   // ===== CHARGEMENT DES DONNÉES =====
 
   loadUserProfile() {
-    console.log('Loading user profile...');
     this.isLoading = true;
     this.errorMessage = '';
+
+    console.log('📡 Chargement du profil utilisateur...');
 
     this.userProfileService.getCurrentUserProfile()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (user) => {
-          console.log('User profile loaded:', user);
+          console.log('✅ Profil utilisateur reçu:', user);
           this.currentUser = user;
           this.initializeEditForm();
           this.calculateStats();
           this.isLoading = false;
         },
         error: (error) => {
-          console.error('Erreur lors du chargement du profil:', error);
-          this.errorMessage = error.message || 'Impossible de charger les informations du profil';
+          console.error('❌ Erreur lors du chargement du profil:', error);
+          this.errorMessage = 'Impossible de charger les informations du profil';
           this.isLoading = false;
+
+          // Fallback: essayer d'utiliser les données de l'AuthService
+          this.tryFallbackUserData();
         }
       });
+  }
+
+  private tryFallbackUserData() {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser) {
+      console.log('🔄 Utilisation des données de fallback:', currentUser);
+      this.currentUser = {
+        id: currentUser.id,
+        nom: currentUser.nom || '',
+        prenom: currentUser.prenom || '',
+        email: currentUser.email || '',
+        nomComplet: currentUser.nomComplet || '',
+        role: currentUser.role || '',
+        actif: currentUser.actif !== undefined ? currentUser.actif : true,
+        nbFacturesCreees: currentUser.nbFacturesCreees || 0,
+        nbFacturesValideesN1: currentUser.nbFacturesValideesN1 || 0,
+        nbFacturesValideesN2: currentUser.nbFacturesValideesN2 || 0,
+        nbFacturesTraitees: currentUser.nbFacturesTraitees || 0
+      };
+      this.initializeEditForm();
+      this.calculateStats();
+      this.errorMessage = 'Profil chargé en mode hors ligne';
+    }
   }
 
   private initializeEditForm() {
@@ -112,7 +142,6 @@ export class MonProfilComponent implements OnInit, OnDestroy {
   private calculateStats() {
     if (this.currentUser) {
       this.stats = this.userProfileService.formatStatistics(this.currentUser);
-      console.log('Stats calculated:', this.stats);
     }
   }
 
@@ -124,6 +153,7 @@ export class MonProfilComponent implements OnInit, OnDestroy {
     this.successMessage = '';
     this.validationErrors = [];
     this.initializeEditForm();
+    console.log('✏️ Mode édition activé');
   }
 
   cancelEditing() {
@@ -133,6 +163,7 @@ export class MonProfilComponent implements OnInit, OnDestroy {
     this.successMessage = '';
     this.validationErrors = [];
     this.resetForms();
+    console.log('❌ Edition annulée');
   }
 
   private resetForms() {
@@ -147,13 +178,13 @@ export class MonProfilComponent implements OnInit, OnDestroy {
   // ===== SAUVEGARDE DU PROFIL =====
 
   saveProfile() {
-    console.log('Saving profile...');
     if (!this.validateProfileForm()) {
       return;
     }
 
     this.isSaving = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const updateData: UpdateProfileRequest = {
       nom: this.editForm.nom.trim(),
@@ -161,22 +192,24 @@ export class MonProfilComponent implements OnInit, OnDestroy {
       email: this.editForm.email.trim()
     };
 
-    console.log('Update data:', updateData);
+    console.log('💾 Sauvegarde du profil:', updateData);
 
     this.userProfileService.updateProfile(updateData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Profile updated successfully:', response);
+          console.log('✅ Profil mis à jour avec succès:', response);
           this.successMessage = 'Profil mis à jour avec succès';
           this.isEditing = false;
           this.isSaving = false;
+
+          // Recharger les données pour refléter les changements
           setTimeout(() => {
-            this.loadUserProfile(); // Recharger les données
+            this.loadUserProfile();
           }, 1000);
         },
         error: (error) => {
-          console.error('Erreur lors de la mise à jour:', error);
+          console.error('❌ Erreur lors de la mise à jour:', error);
           this.errorMessage = error.message || 'Erreur lors de la mise à jour du profil';
           this.isSaving = false;
         }
@@ -190,6 +223,7 @@ export class MonProfilComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
     this.validationErrors = [];
+
     if (!this.showPasswordForm) {
       this.passwordForm = {
         currentPassword: '',
@@ -197,16 +231,20 @@ export class MonProfilComponent implements OnInit, OnDestroy {
         confirmPassword: ''
       };
     }
+
+    console.log('🔐 Formulaire mot de passe:', this.showPasswordForm ? 'affiché' : 'masqué');
   }
 
   changePassword() {
-    console.log('Changing password...');
     if (!this.validatePasswordForm()) {
       return;
     }
 
     this.isSaving = true;
     this.errorMessage = '';
+    this.successMessage = '';
+
+    console.log('🔐 Changement de mot de passe...');
 
     this.userProfileService.changePassword(
       this.passwordForm.currentPassword,
@@ -214,14 +252,14 @@ export class MonProfilComponent implements OnInit, OnDestroy {
     ).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Password changed successfully:', response);
+          console.log('✅ Mot de passe modifié avec succès:', response);
           this.successMessage = 'Mot de passe modifié avec succès';
           this.showPasswordForm = false;
           this.isSaving = false;
           this.resetForms();
         },
         error: (error) => {
-          console.error('Erreur lors du changement de mot de passe:', error);
+          console.error('❌ Erreur lors du changement de mot de passe:', error);
           this.errorMessage = error.message || 'Erreur lors du changement de mot de passe';
           this.isSaving = false;
         }
@@ -241,6 +279,10 @@ export class MonProfilComponent implements OnInit, OnDestroy {
       this.validationErrors.push('L\'email est obligatoire');
     } else if (!this.userProfileService.validateEmail(this.editForm.email)) {
       this.validationErrors.push('Format d\'email invalide');
+    }
+
+    if (this.validationErrors.length > 0) {
+      console.warn('❌ Erreurs de validation profil:', this.validationErrors);
     }
 
     return this.validationErrors.length === 0;
@@ -264,6 +306,10 @@ export class MonProfilComponent implements OnInit, OnDestroy {
 
     if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
       this.validationErrors.push('Les mots de passe ne correspondent pas');
+    }
+
+    if (this.validationErrors.length > 0) {
+      console.warn('❌ Erreurs de validation mot de passe:', this.validationErrors);
     }
 
     return this.validationErrors.length === 0;
@@ -291,12 +337,14 @@ export class MonProfilComponent implements OnInit, OnDestroy {
   // ===== ACTIONS UTILITAIRES =====
 
   refreshProfile() {
-    console.log('Refreshing profile...');
+    console.log('🔄 Actualisation du profil...');
     this.loadUserProfile();
   }
 
   downloadProfileData() {
     if (!this.currentUser) return;
+
+    console.log('📥 Téléchargement des données du profil...');
 
     const profileData = {
       nom: this.currentUser.nom,
@@ -316,12 +364,14 @@ export class MonProfilComponent implements OnInit, OnDestroy {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+
+    console.log('✅ Données du profil téléchargées');
   }
 
   // ===== GETTERS POUR LE TEMPLATE =====
 
   get canEdit(): boolean {
-    return !this.isLoading && !this.isSaving;
+    return !this.isLoading && !this.isSaving && this.currentUser !== null;
   }
 
   get hasValidationErrors(): boolean {
@@ -340,5 +390,22 @@ export class MonProfilComponent implements OnInit, OnDestroy {
       this.passwordForm.confirmPassword !== '' &&
       this.passwordForm.newPassword === this.passwordForm.confirmPassword &&
       this.userProfileService.validatePassword(this.passwordForm.newPassword).valid;
+  }
+
+  // ===== MÉTHODES DE DEBUG =====
+
+  logCurrentState() {
+    console.log('🔍 État actuel du composant Mon Profil:', {
+      isLoading: this.isLoading,
+      isEditing: this.isEditing,
+      isSaving: this.isSaving,
+      showPasswordForm: this.showPasswordForm,
+      currentUser: this.currentUser,
+      editForm: this.editForm,
+      stats: this.stats,
+      hasErrors: this.hasValidationErrors,
+      errorMessage: this.errorMessage,
+      successMessage: this.successMessage
+    });
   }
 }

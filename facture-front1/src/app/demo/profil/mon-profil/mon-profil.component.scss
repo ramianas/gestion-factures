@@ -1,0 +1,409 @@
+// Fichier: facture-front1/src/app/demo/profil/mon-profil/mon-profil.component.scss
+
+.profil-container {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.page-title {
+  color: #495057;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: #6c757d;
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+// Profil en lecture seule
+.profile-view {
+  .profile-value {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid #e9ecef;
+    font-weight: 500;
+
+    &:empty::before {
+      content: "Non renseigné";
+      color: #6c757d;
+      font-style: italic;
+    }
+  }
+}
+
+// Formulaire d'édition
+.profile-edit {
+  .form-control {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    font-size: 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    &:focus {
+      border-color: #80bdff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      outline: none;
+    }
+
+    &:disabled {
+      background-color: #e9ecef;
+      opacity: 1;
+    }
+  }
+
+  .edit-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 0.75rem;
+  }
+}
+
+// Section mot de passe
+.password-section {
+  text-align: center;
+  padding: 2rem;
+
+  p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+}
+
+.password-form {
+  .password-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 0.75rem;
+  }
+}
+
+// Statistiques
+.stats-content {
+  .stat-item {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      color: #495057;
+    }
+
+    .progress {
+      height: 0.5rem;
+      background-color: #e9ecef;
+      border-radius: 0.25rem;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      transition: width 0.6s ease;
+      border-radius: 0.25rem;
+    }
+
+    small {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+.role-stats {
+  .stat-item {
+    margin-bottom: 1rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Étiquettes et badges
+.badge {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+
+  &.required::after {
+    content: " *";
+    color: #dc3545;
+  }
+}
+
+// Messages d'erreur et de succès
+.alert {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+
+  &.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+  }
+
+  &.alert-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border-left: 4px solid #198754;
+  }
+
+  &.alert-warning {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-left: 4px solid #ffc107;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    padding-left: 1.25rem;
+
+    li {
+      margin-bottom: 0.25rem;
+    }
+  }
+}
+
+// Boutons
+.btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  i {
+    margin-right: 0.5rem;
+  }
+
+  &.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background-color: #0b5ed7;
+      border-color: #0a58ca;
+    }
+  }
+
+  &.btn-success {
+    background-color: #198754;
+    border-color: #198754;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background-color: #157347;
+      border-color: #146c43;
+    }
+  }
+
+  &.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+
+    &:hover:not(:disabled) {
+      background-color: #ffca2c;
+      border-color: #ffc720;
+    }
+  }
+
+  &.btn-outline-secondary {
+    background-color: transparent;
+    border-color: #6c757d;
+    color: #6c757d;
+
+    &:hover:not(:disabled) {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      color: #fff;
+    }
+  }
+}
+
+// Spinner de chargement
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+
+  &.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+  }
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .profil-container {
+    padding: 0.5rem;
+  }
+
+  .page-header {
+    .d-flex {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .header-actions {
+      justify-content: center;
+    }
+  }
+
+  .edit-actions,
+  .password-actions {
+    flex-direction: column;
+
+    .btn {
+      width: 100%;
+    }
+  }
+
+  .stats-content {
+    .stat-item {
+      text-align: center;
+    }
+  }
+}
+
+// Animation pour les transitions
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Card personnalisée
+.card-custom {
+  border: 1px solid #e3e6f0;
+  border-radius: 0.35rem;
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+
+  .card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.25rem;
+
+    h6 {
+      margin: 0;
+      font-weight: 700;
+      color: #5a5c69;
+    }
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+}

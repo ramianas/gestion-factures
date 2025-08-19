@@ -203,6 +203,79 @@ public class AuthController {
             return ResponseEntity.badRequest().body(createErrorResponse("Erreur lors de la validation du token"));
         }
     }
+    // Ajout à AuthController.java
+// Ajoutez cette méthode dans votre AuthController
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, Object>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getName() == null) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Token invalide ou expiré"));
+            }
+
+            String email = authentication.getName();
+            Optional<User> userOpt = userService.getUserByEmail(email);
+
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Utilisateur non trouvé"));
+            }
+
+            User user = userOpt.get();
+
+            // Vérifier l'ancien mot de passe
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getMotDePasse())) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Mot de passe actuel incorrect"));
+            }
+
+            // Valider le nouveau mot de passe
+            if (request.getNewPassword().length() < 6) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Le nouveau mot de passe doit contenir au moins 6 caractères"));
+            }
+
+            // Mettre à jour le mot de passe
+            user.setMotDePasse(passwordEncoder.encode(request.getNewPassword()));
+            userService.saveUser(user);
+
+            log.info("Mot de passe modifié pour l'utilisateur: {}", email);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Mot de passe modifié avec succès");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Erreur lors du changement de mot de passe", e);
+            return ResponseEntity.internalServerError().body(createErrorResponse("Erreur lors du changement de mot de passe"));
+        }
+    }
+
+    // DTO pour le changement de mot de passe
+    public static class ChangePasswordRequest {
+        @NotBlank(message = "Le mot de passe actuel est obligatoire")
+        private String currentPassword;
+
+        @NotBlank(message = "Le nouveau mot de passe est obligatoire")
+        @Size(min = 6, message = "Le nouveau mot de passe doit contenir au moins 6 caractères")
+        private String newPassword;
+
+        // Constructeurs
+        public ChangePasswordRequest() {}
+
+        public ChangePasswordRequest(String currentPassword, String newPassword) {
+            this.currentPassword = currentPassword;
+            this.newPassword = newPassword;
+        }
+
+        // Getters et setters
+        public String getCurrentPassword() { return currentPassword; }
+        public void setCurrentPassword(String currentPassword) { this.currentPassword = currentPassword; }
+
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
 
     // ===== MÉTHODES UTILITAIRES =====
 

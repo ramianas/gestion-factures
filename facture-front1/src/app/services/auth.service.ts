@@ -139,10 +139,10 @@ export class AuthService {
     this.currentUserSubject.next(null);
   }
 
-  private setCurrentUser(user: User): void {
+  /*private setCurrentUser(user: User): void {
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this.currentUserSubject.next(user);
-  }
+  }*/
 
   // ===== GETTERS =====
 
@@ -224,6 +224,10 @@ export class AuthService {
     return this.hasRole('ADMIN');
   }
 
+ setCurrentUser(user: User): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    this.currentUserSubject.next(user);
+  }
   // ===== GESTION D'ERREURS =====
 
   private handleError(error: any): Observable<never> {

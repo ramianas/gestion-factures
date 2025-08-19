@@ -1,0 +1,12 @@
+.profil-container { padding: 1rem; }
+.page-header { margin-bottom: 1.25rem; }
+.page-title { margin: 0; }
+.page-subtitle { margin: .25rem 0 0; color: #6c757d; }
+
+.loading-container { display:flex; justify-content:center; align-items:center; min-height: 240px; }
+.profile-value { font-weight: 600; }
+
+.edit-actions, .password-actions { display:flex; gap:.5rem; }
+.stat-item .stat-label { color:#6c757d; }
+.stat-item .stat-value { font-weight:700; }
+.progress { height: 8px; }

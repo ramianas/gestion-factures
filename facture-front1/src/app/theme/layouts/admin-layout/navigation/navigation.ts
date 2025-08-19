@@ -22,7 +22,7 @@ export interface NavigationItem {
 }
 
 export const NavigationItems: NavigationItem[] = [
-  {
+  /*{
     id: 'dashboard',
     title: 'Tableau de bord',
     type: 'group',
@@ -39,7 +39,7 @@ export const NavigationItems: NavigationItem[] = [
         roles: ['U1', 'V1', 'V2', 'T1', 'ADMIN'] // Tous les rôles
       }
     ]
-  },
+  },*/
 
   // ===== SECTION GESTION FACTURES =====
   {

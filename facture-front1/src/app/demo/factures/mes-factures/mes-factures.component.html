@@ -1,0 +1,358 @@
+<!-- Fichier: facture-front1/src/app/demo/factures/mes-factures/mes-factures.component.html -->
+
+<div class="factures-container">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="page-title">
+          <i class="fas fa-file-invoice me-2"></i>
+          {{ getTitreSection() }}
+        </h2>
+        <p class="page-subtitle">{{ getDescriptionSection() }}</p>
+      </div>
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary me-2"
+          (click)="actualiser()"
+          [disabled]="isLoading">
+          <i class="fas fa-sync-alt me-1"></i>
+          Actualiser
+        </button>
+        <button
+          *ngIf="currentUser?.role === 'U1'"
+          type="button"
+          class="btn btn-primary"
+          [routerLink]="['/factures/create']">
+          <i class="fas fa-plus me-1"></i>
+          Nouvelle Facture
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-primary"
+          (click)="exporterDonnees()"
+          [disabled]="facturesFiltrees.length === 0">
+          <i class="fas fa-download me-1"></i>
+          Exporter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''" aria-label="Fermer">×</button>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-primary">
+          <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.total }}</h3>
+          <p>Total</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-warning">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.enCours }}</h3>
+          <p>En cours</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-success">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.payees }}</h3>
+          <p>Payées</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-danger">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.rejetees }}</h3>
+          <p>Rejetées</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres et recherche -->
+  <app-card cardTitle="Filtres et Recherche" [showContent]="true" class="mb-4">
+    <div class="row">
+      <div class="col-md-4">
+        <label for="recherche" class="form-label">Recherche</label>
+        <input
+          type="text"
+          id="recherche"
+          class="form-control"
+          [(ngModel)]="filtreRecherche"
+          (input)="onRechercheChange()"
+          placeholder="Numéro, fournisseur, désignation..."
+        >
+      </div>
+      <div class="col-md-3">
+        <label for="statut" class="form-label">Statut</label>
+        <select
+          id="statut"
+          class="form-select"
+          [(ngModel)]="filtreStatut"
+          (change)="onFiltreChange()">
+          <option value="">Tous les statuts</option>
+          <option value="SAISIE">En saisie</option>
+          <option value="EN_VALIDATION_V1">Validation V1</option>
+          <option value="EN_VALIDATION_V2">Validation V2</option>
+          <option value="EN_TRESORERIE">Trésorerie</option>
+          <option value="VALIDEE">Validée</option>
+          <option value="PAYEE">Payée</option>
+          <option value="REJETEE">Rejetée</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="elementsParPage" class="form-label">Éléments/page</label>
+        <select
+          id="elementsParPage"
+          class="form-select"
+          [(ngModel)]="elementsParPage"
+          (change)="appliquerFiltres()">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="filtreRecherche = ''; filtreStatut = ''; appliquerFiltres()">
+          <i class="fas fa-eraser me-1"></i>
+          Effacer filtres
+        </button>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Liste des factures -->
+  <app-card cardTitle="Liste des Factures" [showContent]="true">
+    <ng-template #headerTitleTemplate>
+      <i class="fas fa-list me-2"></i>
+    </ng-template>
+
+    <!-- État de chargement -->
+    <div *ngIf="isLoading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Chargement...</span>
+      </div>
+      <p class="mt-3">Chargement des factures...</p>
+    </div>
+
+    <!-- Aucune facture -->
+    <div *ngIf="!isLoading && facturesPaginees.length === 0" class="text-center py-5">
+      <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+      <h5>Aucune facture trouvée</h5>
+      <p class="text-muted">
+        <span *ngIf="filtreRecherche || filtreStatut">
+          Aucune facture ne correspond à vos critères de recherche.
+        </span>
+        <span *ngIf="!filtreRecherche && !filtreStatut && currentUser?.role === 'U1'">
+          Vous n'avez pas encore créé de facture.
+        </span>
+        <span *ngIf="!filtreRecherche && !filtreStatut && currentUser?.role !== 'U1'">
+          Aucune facture en attente de traitement.
+        </span>
+      </p>
+      <button
+        *ngIf="currentUser?.role === 'U1'"
+        type="button"
+        class="btn btn-primary"
+        [routerLink]="['/factures/create']">
+        <i class="fas fa-plus me-1"></i>
+        Créer ma première facture
+      </button>
+    </div>
+
+    <!-- Tableau des factures -->
+    <div *ngIf="!isLoading && facturesPaginees.length > 0" class="table-responsive">
+      <table class="table table-hover">
+        <thead class="table-light">
+        <tr>
+          <th>Numéro</th>
+          <th>Fournisseur</th>
+          <th>Montant TTC</th>
+          <th>Date Facture</th>
+          <th>Échéance</th>
+          <th>Statut</th>
+          <th class="text-center">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let facture of facturesPaginees; trackBy: trackByFactureId">
+          <td>
+            <strong>{{ facture.numero }}</strong>
+          </td>
+          <td>
+            <div class="fournisseur-info">
+              <div class="nom">{{ facture.nomFournisseur }}</div>
+              <small class="text-muted" *ngIf="facture.designation">
+                {{ facture.designation }}
+              </small>
+            </div>
+          </td>
+          <td>
+            <strong class="text-primary">{{ formatMontant(facture.montantTTC || 0) }}</strong>
+          </td>
+          <td>{{ formatDate(facture.dateFacture) }}</td>
+          <td>
+              <span [ngClass]="{
+                'text-danger': facture.estEnRetard,
+                'text-warning': facture.joursAvantEcheance <= 7 && facture.joursAvantEcheance > 0,
+                'text-muted': !facture.dateEcheance
+              }">
+                {{ formatDate(facture.dateEcheance) }}
+              </span>
+            <br>
+            <small *ngIf="facture.joursAvantEcheance !== undefined"
+                   [ngClass]="{
+                       'text-danger': facture.estEnRetard,
+                       'text-warning': facture.joursAvantEcheance <= 7 && facture.joursAvantEcheance > 0
+                     }">
+              <span *ngIf="facture.estEnRetard">En retard</span>
+              <span *ngIf="!facture.estEnRetard && facture.joursAvantEcheance <= 7">
+                  {{ facture.joursAvantEcheance }} jours
+                </span>
+            </small>
+          </td>
+          <td>
+              <span [ngClass]="getStatutClass(facture.statut)">
+                {{ getStatutLibelle(facture.statut) }}
+              </span>
+          </td>
+          <td class="text-center">
+            <div class="btn-group" role="group">
+              <!-- Voir détails -->
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                (click)="voirDetails(facture)"
+                title="Voir les détails">
+                <i class="fas fa-eye"></i>
+              </button>
+
+              <!-- Actions pour U1 -->
+              <ng-container *ngIf="currentUser?.role === 'U1'">
+                <!-- Modifier -->
+                <button
+                  *ngIf="peutModifier(facture)"
+                  type="button"
+                  class="btn btn-sm btn-outline-warning"
+                  (click)="modifierFacture(facture)"
+                  title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+
+                <!-- Soumettre pour validation -->
+                <button
+                  *ngIf="peutSoumettre(facture)"
+                  type="button"
+                  class="btn btn-sm btn-outline-success"
+                  (click)="soumettreValidation(facture)"
+                  title="Soumettre pour validation">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+
+                <!-- Supprimer -->
+                <button
+                  *ngIf="peutSupprimer(facture)"
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="supprimerFacture(facture)"
+                  title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </ng-container>
+
+              <!-- Actions pour V1/V2 -->
+              <ng-container *ngIf="currentUser?.role === 'V1' || currentUser?.role === 'V2'">
+                <button
+                  *ngIf="peutValider(facture)"
+                  type="button"
+                  class="btn btn-sm btn-success"
+                  (click)="voirDetails(facture)"
+                  title="Valider">
+                  <i class="fas fa-check"></i>
+                </button>
+              </ng-container>
+
+              <!-- Actions pour T1 -->
+              <ng-container *ngIf="currentUser?.role === 'T1'">
+                <button
+                  *ngIf="peutTraiter(facture)"
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  (click)="voirDetails(facture)"
+                  title="Traiter le paiement">
+                  <i class="fas fa-money-bill-wave"></i>
+                </button>
+              </ng-container>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <nav *ngIf="nombrePages > 1" aria-label="Pagination des factures">
+      <ul class="pagination justify-content-center">
+        <li class="page-item" [ngClass]="{ disabled: pageActuelle === 1 }">
+          <button class="page-link" (click)="changerPage(pageActuelle - 1)">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+        </li>
+
+        <li
+          *ngFor="let page of [].constructor(nombrePages); let i = index"
+          class="page-item"
+          [ngClass]="{ active: pageActuelle === i + 1 }">
+          <button class="page-link" (click)="changerPage(i + 1)">
+            {{ i + 1 }}
+          </button>
+        </li>
+
+        <li class="page-item" [ngClass]="{ disabled: pageActuelle === nombrePages }">
+          <button class="page-link" (click)="changerPage(pageActuelle + 1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Info pagination -->
+    <div *ngIf="facturesFiltrees.length > 0" class="d-flex justify-content-between align-items-center mt-3">
+      <small class="text-muted">
+        Affichage {{ (pageActuelle - 1) * elementsParPage + 1 }} à
+        {{ Math.min(pageActuelle * elementsParPage, totalElements) }}
+        sur {{ totalElements }} factures
+      </small>
+    </div>
+  </app-card>
+</div>

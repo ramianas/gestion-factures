@@ -38,9 +38,9 @@ const routes: Routes = [
       },
       {
         path: 'factures/list',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/factures/mes-factures/mes-factures.component').then((c) => c.MesFacturesComponent),
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['U1', 'V1', 'V2', 'T1', 'ADMIN'] } // Tous les rôles peuvent voir la liste
+        data: { roles: ['U1', 'V1', 'V2', 'T1', 'ADMIN'] } // Tous les rôles peuvent voir leurs factures
       },
       {
         path: 'factures/validation-v1',
@@ -70,7 +70,7 @@ const routes: Routes = [
       // ===== ROUTES ADMINISTRATION =====
       {
         path: 'admin/users',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/administration/gestion-utilisateurs/gestion-utilisateurs.component').then((c) => c.GestionUtilisateursComponent),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['ADMIN'] } // Seuls les admins
       },
@@ -92,8 +92,13 @@ const routes: Routes = [
       // ===== ROUTES PROFIL =====
       {
         path: 'profile',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/profil/mon-profil/mon-profil.component').then((c) => c.MonProfilComponent),
         canActivate: [AuthGuard] // Tous les utilisateurs connectés
+      },
+      {
+        path: 'mon-profil', // Route alternative
+        loadComponent: () => import('./demo/profil/mon-profil/mon-profil.component').then((c) => c.MonProfilComponent),
+        canActivate: [AuthGuard]
       },
 
       // ===== ROUTES UTILITAIRES (pour la démo) =====

@@ -12,7 +12,7 @@
   </div>
 
   <!-- Contenu principal -->
-  <div *ngIf="!isLoading" class="main-content">
+  <div *ngIf="!isLoading" class="main-content fade-in">
     <!-- En-tête -->
     <div class="page-header">
       <div class="d-flex justify-content-between align-items-center">
@@ -49,13 +49,13 @@
     <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
       <i class="fas fa-exclamation-triangle me-2"></i>
       {{ errorMessage }}
-      <button type="button" class="btn-close" (click)="clearMessages()"></button>
+      <button type="button" class="btn-close" (click)="clearMessages()" aria-label="Fermer">×</button>
     </div>
 
     <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
       <i class="fas fa-check-circle me-2"></i>
       {{ successMessage }}
-      <button type="button" class="btn-close" (click)="clearMessages()"></button>
+      <button type="button" class="btn-close" (click)="clearMessages()" aria-label="Fermer">×</button>
     </div>
 
     <div *ngIf="hasValidationErrors" class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
@@ -64,7 +64,7 @@
       <ul class="mb-0 mt-2">
         <li *ngFor="let error of validationErrors">{{ error }}</li>
       </ul>
-      <button type="button" class="btn-close" (click)="clearMessages()"></button>
+      <button type="button" class="btn-close" (click)="clearMessages()" aria-label="Fermer">×</button>
     </div>
 
     <div class="row">
@@ -109,62 +109,69 @@
 
           <div *ngIf="isEditing" class="profile-edit">
             <!-- Formulaire d'édition -->
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="nom" class="form-label required">Nom</label>
-                <input
-                  type="text"
-                  id="nom"
-                  class="form-control"
-                  [(ngModel)]="editForm.nom"
-                  [disabled]="isSaving"
-                  placeholder="Votre nom"
-                />
+            <form (ngSubmit)="saveProfile()" #profileForm="ngForm">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nom" class="form-label required">Nom</label>
+                  <input
+                    type="text"
+                    id="nom"
+                    name="nom"
+                    class="form-control"
+                    [(ngModel)]="editForm.nom"
+                    [disabled]="isSaving"
+                    required
+                    placeholder="Votre nom"
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="prenom" class="form-label">Prénom</label>
+                  <input
+                    type="text"
+                    id="prenom"
+                    name="prenom"
+                    class="form-control"
+                    [(ngModel)]="editForm.prenom"
+                    [disabled]="isSaving"
+                    placeholder="Votre prénom"
+                  />
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label for="email" class="form-label required">Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control"
+                    [(ngModel)]="editForm.email"
+                    [disabled]="isSaving"
+                    required
+                    email
+                    placeholder="votre.email@exemple.com"
+                  />
+                </div>
               </div>
-              <div class="col-md-6 mb-3">
-                <label for="prenom" class="form-label">Prénom</label>
-                <input
-                  type="text"
-                  id="prenom"
-                  class="form-control"
-                  [(ngModel)]="editForm.prenom"
-                  [disabled]="isSaving"
-                  placeholder="Votre prénom"
-                />
-              </div>
-              <div class="col-md-12 mb-3">
-                <label for="email" class="form-label required">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  class="form-control"
-                  [(ngModel)]="editForm.email"
-                  [disabled]="isSaving"
-                  placeholder="votre.email@exemple.com"
-                />
-              </div>
-            </div>
 
-            <!-- Actions d'édition -->
-            <div class="edit-actions">
-              <button
-                type="button"
-                class="btn btn-success me-2"
-                (click)="saveProfile()"
-                [disabled]="!isFormValid || isSaving">
-                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2"></span>
-                <i *ngIf="!isSaving" class="fas fa-save me-2"></i>
-                {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                (click)="cancelEditing()"
-                [disabled]="isSaving">
-                <i class="fas fa-times me-2"></i>
-                Annuler
-              </button>
-            </div>
+              <!-- Actions d'édition -->
+              <div class="edit-actions">
+                <button
+                  type="submit"
+                  class="btn btn-success me-2"
+                  [disabled]="!isFormValid || isSaving">
+                  <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+                  <i *ngIf="!isSaving" class="fas fa-save me-2"></i>
+                  {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  (click)="cancelEditing()"
+                  [disabled]="isSaving">
+                  <i class="fas fa-times me-2"></i>
+                  Annuler
+                </button>
+              </div>
+            </form>
           </div>
         </app-card>
 
@@ -189,61 +196,69 @@
           </div>
 
           <div *ngIf="showPasswordForm" class="password-form">
-            <div class="row">
-              <div class="col-md-12 mb-3">
-                <label for="currentPassword" class="form-label required">Mot de passe actuel</label>
-                <input
-                  type="password"
-                  id="currentPassword"
-                  class="form-control"
-                  [(ngModel)]="passwordForm.currentPassword"
-                  [disabled]="isSaving"
-                  placeholder="Votre mot de passe actuel"
-                />
+            <form (ngSubmit)="changePassword()" #passwordFormRef="ngForm">
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label for="currentPassword" class="form-label required">Mot de passe actuel</label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    name="currentPassword"
+                    class="form-control"
+                    [(ngModel)]="passwordForm.currentPassword"
+                    [disabled]="isSaving"
+                    required
+                    placeholder="Votre mot de passe actuel"
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="newPassword" class="form-label required">Nouveau mot de passe</label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    name="newPassword"
+                    class="form-control"
+                    [(ngModel)]="passwordForm.newPassword"
+                    [disabled]="isSaving"
+                    required
+                    minlength="6"
+                    placeholder="Nouveau mot de passe"
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="confirmPassword" class="form-label required">Confirmer le mot de passe</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    class="form-control"
+                    [(ngModel)]="passwordForm.confirmPassword"
+                    [disabled]="isSaving"
+                    required
+                    placeholder="Confirmez le mot de passe"
+                  />
+                </div>
               </div>
-              <div class="col-md-6 mb-3">
-                <label for="newPassword" class="form-label required">Nouveau mot de passe</label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  class="form-control"
-                  [(ngModel)]="passwordForm.newPassword"
-                  [disabled]="isSaving"
-                  placeholder="Nouveau mot de passe"
-                />
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="confirmPassword" class="form-label required">Confirmer le mot de passe</label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  class="form-control"
-                  [(ngModel)]="passwordForm.confirmPassword"
-                  [disabled]="isSaving"
-                  placeholder="Confirmez le mot de passe"
-                />
-              </div>
-            </div>
 
-            <div class="password-actions">
-              <button
-                type="button"
-                class="btn btn-warning me-2"
-                (click)="changePassword()"
-                [disabled]="!isPasswordFormValid || isSaving">
-                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2"></span>
-                <i *ngIf="!isSaving" class="fas fa-key me-2"></i>
-                {{ isSaving ? 'Modification...' : 'Modifier le mot de passe' }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                (click)="togglePasswordForm()"
-                [disabled]="isSaving">
-                <i class="fas fa-times me-2"></i>
-                Annuler
-              </button>
-            </div>
+              <div class="password-actions">
+                <button
+                  type="submit"
+                  class="btn btn-warning me-2"
+                  [disabled]="!isPasswordFormValid || isSaving">
+                  <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+                  <i *ngIf="!isSaving" class="fas fa-key me-2"></i>
+                  {{ isSaving ? 'Modification...' : 'Modifier le mot de passe' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  (click)="togglePasswordForm()"
+                  [disabled]="isSaving">
+                  <i class="fas fa-times me-2"></i>
+                  Annuler
+                </button>
+              </div>
+            </form>
           </div>
         </app-card>
       </div>
@@ -273,8 +288,68 @@
             </div>
 
             <!-- Détails par rôle -->
-            <div *ngIf="currentUser.role === 'U1'" class="role-stats">
-              <div class="stat-item">
+            <div class="role-stats">
+              <div class="stat-item" *ngIf="currentUser.role === 'U1'">
                 <div class="d-flex justify-content-between">
                   <span class="stat-label">
-                    <i class="fas fa-plus-circle
+                    <i class="fas fa-plus-circle text-primary me-1"></i>
+                    Factures créées
+                  </span>
+                  <span class="stat-value">{{ stats.facturesCreees }}</span>
+                </div>
+              </div>
+
+              <div class="stat-item" *ngIf="currentUser.role === 'V1'">
+                <div class="d-flex justify-content-between">
+                  <span class="stat-label">
+                    <i class="fas fa-check-circle text-success me-1"></i>
+                    Validations V1
+                  </span>
+                  <span class="stat-value">{{ stats.facturesValideesN1 }}</span>
+                </div>
+              </div>
+
+              <div class="stat-item" *ngIf="currentUser.role === 'V2'">
+                <div class="d-flex justify-content-between">
+                  <span class="stat-label">
+                    <i class="fas fa-check-double text-info me-1"></i>
+                    Validations V2
+                  </span>
+                  <span class="stat-value">{{ stats.facturesValideesN2 }}</span>
+                </div>
+              </div>
+
+              <div class="stat-item" *ngIf="currentUser.role === 'T1'">
+                <div class="d-flex justify-content-between">
+                  <span class="stat-label">
+                    <i class="fas fa-money-bill-wave text-warning me-1"></i>
+                    Paiements traités
+                  </span>
+                  <span class="stat-value">{{ stats.facturesTraitees }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+
+        <!-- Actions supplémentaires -->
+        <app-card cardTitle="Actions" [showContent]="true" class="mt-4">
+          <ng-template #headerTitleTemplate>
+            <i class="fas fa-cogs me-2"></i>
+          </ng-template>
+
+          <div class="d-grid gap-2">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              (click)="downloadProfileData()"
+              [disabled]="!currentUser">
+              <i class="fas fa-download me-2"></i>
+              Télécharger mes données
+            </button>
+          </div>
+        </app-card>
+      </div>
+    </div>
+  </div>
+</div>

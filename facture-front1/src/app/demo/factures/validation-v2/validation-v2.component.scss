@@ -1,0 +1,689 @@
+// Fichier: facture-front1/src/app/demo/factures/validation-v2/validation-v2.component.scss
+
+// === Variables spécifiques V2 ===
+$primary-color: #1677FF;
+$success-color: #52C41A;
+$warning-color: #FAAD14;
+$danger-color: #FF4D4F;
+$info-color: #1890FF;
+$text-primary: #262626;
+$text-secondary: #8C8C8C;
+$border-color: #D9D9D9;
+$background-light: #FAFAFA;
+
+// === Container Principal ===
+.validation-v2-container {
+  min-height: 100vh;
+  background-color: $background-light;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
+}
+
+// === Page Header ===
+.page-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F0F0F0;
+  border-left: 4px solid $info-color; // Distinction V2
+
+  .page-title {
+    color: $text-primary;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+
+    i {
+      color: $info-color; // Couleur spécifique V2
+    }
+  }
+
+  .page-subtitle {
+    color: $text-secondary;
+    margin: 8px 0 0 0;
+    font-size: 14px;
+  }
+
+  .header-actions {
+    .btn {
+      border-radius: 8px;
+      font-weight: 500;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+
+    .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 16px;
+    }
+
+    .header-actions {
+      width: 100%;
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// === Statistiques rapides ===
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  &.urgent {
+    border-left: 4px solid $danger-color;
+
+    &:hover {
+      border-left-color: darken($danger-color, 10%);
+    }
+  }
+
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    color: white;
+    font-size: 20px;
+
+    &.bg-primary { background: linear-gradient(135deg, #1677FF 0%, #0050B3 100%); }
+    &.bg-warning { background: linear-gradient(135deg, #FAAD14 0%, #D48806 100%); }
+    &.bg-success { background: linear-gradient(135deg, #52C41A 0%, #389E0D 100%); }
+    &.bg-danger { background: linear-gradient(135deg, #FF4D4F 0%, #CF1322 100%); }
+    &.bg-secondary { background: linear-gradient(135deg, #8C8C8C 0%, #595959 100%); }
+    &.bg-info { background: linear-gradient(135deg, #1890FF 0%, #096DD9 100%); } // Spécifique V2
+  }
+
+  .stat-content {
+    h3 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: $text-primary;
+    }
+
+    p {
+      margin: 0;
+      color: $text-secondary;
+      font-weight: 500;
+      font-size: 14px;
+    }
+  }
+}
+
+// === Tableau des factures ===
+.table-responsive {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.table {
+  margin-bottom: 0;
+
+  th {
+    background-color: #F8F9FA;
+    border-top: none;
+    font-weight: 600;
+    color: $text-primary;
+    padding: 16px 12px;
+    border-bottom: 2px solid #DEE2E6;
+    font-size: 14px;
+  }
+
+  td {
+    padding: 16px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #DEE2E6;
+    font-size: 14px;
+  }
+
+  tbody tr {
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #F8F9FA;
+    }
+
+    &.table-warning {
+      background-color: #FFF7E6;
+      border-left: 4px solid $warning-color;
+    }
+
+    &.table-danger {
+      background-color: #FFF2F0;
+      border-left: 4px solid $danger-color;
+    }
+  }
+}
+
+.fournisseur-info {
+  .nom {
+    font-weight: 500;
+    color: $text-primary;
+    margin-bottom: 2px;
+  }
+
+  small {
+    display: block;
+    color: $text-secondary;
+    font-size: 12px;
+  }
+}
+
+// === Informations spécifiques V2 ===
+.validation-info {
+  .fas {
+    color: $success-color;
+  }
+}
+
+.validateur-info {
+  .nom {
+    font-weight: 500;
+    color: $text-primary;
+  }
+
+  .text-success {
+    font-size: 11px;
+  }
+}
+
+.facture-numero {
+  .badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}
+
+// === Boutons d'action ===
+.btn-group {
+  .btn {
+    border-radius: 6px;
+    margin-right: 4px;
+    font-size: 12px;
+    padding: 6px 10px;
+    border: none;
+    transition: all 0.2s ease;
+
+    &:last-child {
+      margin-right: 0;
+    }
+
+    &.btn-outline-info {
+      border: 1px solid #17A2B8;
+      color: #17A2B8;
+
+      &:hover {
+        background-color: #17A2B8;
+        color: white;
+      }
+    }
+
+    &.btn-success {
+      background: linear-gradient(135deg, $success-color 0%, #389E0D 100%);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(82, 196, 26, 0.3);
+      }
+    }
+
+    &.btn-danger {
+      background: linear-gradient(135deg, $danger-color 0%, #CF1322 100%);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(255, 77, 79, 0.3);
+      }
+    }
+  }
+}
+
+// === États vides ===
+.text-center {
+  &.py-5 {
+    padding: 3rem 1rem;
+
+    .fa-inbox {
+      color: #DEE2E6;
+      margin-bottom: 1rem;
+    }
+
+    h5 {
+      color: $text-secondary;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    p {
+      color: $text-secondary;
+      margin-bottom: 1.5rem;
+    }
+  }
+}
+
+// === Modal de validation V2 ===
+.modal {
+  &.show {
+    display: block !important;
+  }
+
+  .modal-dialog {
+    margin: 2rem auto;
+    max-width: 800px; // Plus large pour V2
+  }
+
+  .modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid #DEE2E6;
+    padding: 20px 24px;
+    border-radius: 12px 12px 0 0;
+
+    &.bg-success {
+      background: linear-gradient(135deg, $success-color 0%, #389E0D 100%) !important;
+    }
+
+    &.bg-danger {
+      background: linear-gradient(135deg, $danger-color 0%, #CF1322 100%) !important;
+    }
+
+    .modal-title {
+      font-weight: 600;
+      font-size: 18px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: inherit;
+      opacity: 0.8;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  .modal-body {
+    padding: 24px;
+
+    .facture-info {
+      background: #F8F9FA;
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid #DEE2E6;
+
+      .section-title {
+        color: $text-primary;
+        font-weight: 600;
+        margin-bottom: 16px;
+        font-size: 16px;
+      }
+
+      .info-grid {
+        .info-item {
+          margin-bottom: 12px;
+          display: flex;
+          flex-direction: column;
+
+          label {
+            font-weight: 600;
+            color: $text-secondary;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+
+          .value {
+            color: $text-primary;
+            font-size: 14px;
+            font-weight: 500;
+          }
+        }
+      }
+
+      // Style spécial pour les infos de validation V1
+      .validation-v1-info {
+        border: 1px solid $success-color;
+        border-left: 4px solid $success-color;
+
+        h6 {
+          color: $success-color;
+          margin-bottom: 12px;
+        }
+      }
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: 8px;
+
+      &.required::after {
+        content: ' *';
+        color: $danger-color;
+        font-weight: bold;
+      }
+    }
+
+    .form-control {
+      border: 1px solid #D9D9D9;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+
+      &:focus {
+        border-color: $info-color; // Couleur spécifique V2
+        box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+        outline: none;
+      }
+
+      &.is-invalid {
+        border-color: $danger-color;
+
+        &:focus {
+          border-color: $danger-color;
+          box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.1);
+        }
+      }
+
+      &::placeholder {
+        color: $text-secondary;
+        font-style: italic;
+      }
+    }
+
+    .invalid-feedback {
+      display: block !important;
+      color: $danger-color;
+      font-size: 12px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .form-text {
+      color: $text-secondary;
+      font-size: 12px;
+      margin-top: 4px;
+
+      .alert {
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 0;
+
+        &.alert-info {
+          background-color: #E6F7FF;
+          border-color: $info-color;
+          color: #096DD9;
+        }
+
+        &.alert-warning {
+          background-color: #FFFBE6;
+          border-color: $warning-color;
+          color: #D48806;
+        }
+      }
+    }
+  }
+
+  .modal-footer {
+    border-top: 1px solid #DEE2E6;
+    padding: 20px 24px;
+    background: #F8F9FA;
+    border-radius: 0 0 12px 12px;
+
+    .btn {
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 500;
+      font-size: 14px;
+      border: none;
+      transition: all 0.3s ease;
+
+      &.btn-secondary {
+        background: #6C757D;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background: #5A6268;
+        }
+      }
+
+      &.btn-success {
+        background: linear-gradient(135deg, $success-color 0%, #389E0D 100%);
+        color: white;
+
+        &:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+        }
+      }
+
+      &.btn-danger {
+        background: linear-gradient(135deg, $danger-color 0%, #CF1322 100%);
+        color: white;
+
+        &:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+        }
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+      }
+    }
+  }
+}
+
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+
+  &.show {
+    opacity: 1;
+  }
+}
+
+// === Spinner de chargement ===
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+  border-width: 0.25em;
+  color: $info-color; // Couleur spécifique V2
+}
+
+// === Alertes ===
+.alert {
+  border: none;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  border-left: 4px solid;
+
+  &.alert-danger {
+    background-color: #FFF2F0;
+    color: #CF1322;
+    border-left-color: $danger-color;
+  }
+
+  &.alert-success {
+    background-color: #F6FFED;
+    color: #389E0D;
+    border-left-color: $success-color;
+  }
+
+  &.alert-warning {
+    background-color: #FFFBE6;
+    color: #D48806;
+    border-left-color: $warning-color;
+  }
+
+  &.alert-info {
+    background-color: #E6F7FF;
+    color: #096DD9;
+    border-left-color: $info-color;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.5;
+    color: inherit;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// === Classes utilitaires ===
+.text-success {
+  color: $success-color !important;
+}
+
+.text-warning {
+  color: $warning-color !important;
+}
+
+.text-danger {
+  color: $danger-color !important;
+}
+
+.text-muted {
+  color: $text-secondary !important;
+}
+
+.text-primary {
+  color: $primary-color !important;
+}
+
+.text-info {
+  color: $info-color !important;
+}
+
+// === Responsive Design ===
+@media (max-width: 768px) {
+  .validation-v2-container {
+    .row {
+      .col-md-3 {
+        margin-bottom: 16px;
+      }
+    }
+
+    .table-responsive {
+      font-size: 12px;
+
+      .table {
+        th, td {
+          padding: 8px 6px;
+        }
+      }
+
+      .btn-group .btn {
+        padding: 4px 6px;
+        font-size: 10px;
+        margin-right: 2px;
+      }
+    }
+
+    .modal-dialog {
+      margin: 1rem;
+      max-width: none;
+    }
+
+    .modal-body {
+      padding: 16px;
+
+      .facture-info {
+        padding: 16px;
+
+        .row .col-md-6 {
+          margin-bottom: 12px;
+        }
+      }
+    }
+
+    .modal-footer {
+      padding: 16px;
+
+      .btn {
+        width: 100%;
+        margin-bottom: 8px;
+      }
+    }
+  }
+}
+
+// === Animation fade-in ===
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// === Print Styles ===
+@media print {
+  .header-actions,
+  .btn-group,
+  .modal {
+    display: none !important;
+  }
+}

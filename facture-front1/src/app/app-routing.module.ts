@@ -12,6 +12,8 @@ import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { GuestGuard } from './guards/guest.guard';
 
+import { ValidationV1Component } from './demo/factures/validation-v1/validation-v1.component';
+
 const routes: Routes = [
   {
     path: '',
@@ -44,13 +46,13 @@ const routes: Routes = [
       },
       {
         path: 'factures/validation-v1',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/factures/validation-v1/validation-v1.component').then((c) => c.ValidationV1Component),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['V1'] } // Seuls les validateurs V1
       },
       {
         path: 'factures/validation-v2',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/factures/validation-v2/validation-v2.component').then((c) => c.ValidationV2Component),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['V2'] } // Seuls les validateurs V2
       },

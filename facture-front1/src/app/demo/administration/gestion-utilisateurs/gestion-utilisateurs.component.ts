@@ -84,6 +84,7 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    console.log('🚀 Initialisation du composant gestion utilisateurs');
     this.currentUser = this.authService.getCurrentUser();
     this.chargerUtilisateurs();
   }
@@ -96,6 +97,7 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
   // ===== CHARGEMENT DES DONNÉES =====
 
   chargerUtilisateurs() {
+    console.log('🔄 Chargement des utilisateurs...');
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -103,19 +105,74 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (utilisateurs) => {
-          console.log('Utilisateurs chargés:', utilisateurs);
-          // Filtrer pour exclure les admins
-          this.utilisateurs = utilisateurs.filter(user => user.role !== 'ADMIN');
+          console.log('✅ Utilisateurs chargés:', utilisateurs);
+
+          // Filtrer pour exclure les admins et traiter les données
+          this.utilisateurs = this.traiterUtilisateurs(utilisateurs);
           this.appliquerFiltres();
           this.calculerStatistiques();
           this.isLoading = false;
+
+          console.log(`📊 ${this.utilisateurs.length} utilisateurs traités`);
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des utilisateurs:', error);
-          this.errorMessage = error.message || 'Erreur lors du chargement des utilisateurs';
+          console.error('❌ Erreur lors du chargement des utilisateurs:', error);
+          this.handleChargementError(error);
           this.isLoading = false;
         }
       });
+  }
+
+  private traiterUtilisateurs(utilisateurs: UserDto[]): UserDto[] {
+    return utilisateurs
+      .filter(user => user.role !== 'ADMIN') // Exclure les admins
+      .map(user => {
+        // S'assurer que tous les champs nécessaires sont présents
+        return {
+          ...user,
+          nom: user.nom || '',
+          prenom: user.prenom || '',
+          email: user.email || '',
+          role: user.role || 'U1',
+          actif: user.actif !== undefined ? user.actif : true,
+          nomComplet: user.nomComplet || `${user.prenom || ''} ${user.nom || ''}`.trim(),
+          nbFacturesCreees: user.nbFacturesCreees || 0,
+          nbFacturesValideesN1: user.nbFacturesValideesN1 || 0,
+          nbFacturesValideesN2: user.nbFacturesValideesN2 || 0,
+          nbFacturesTraitees: user.nbFacturesTraitees || 0
+        };
+      });
+  }
+
+  private handleChargementError(error: any) {
+    let message = 'Erreur lors du chargement des utilisateurs';
+
+    if (error.message) {
+      message = error.message;
+    } else if (error.status === 500) {
+      message = 'Erreur serveur - Les données peuvent être temporairement indisponibles';
+    } else if (error.status === 403) {
+      message = 'Accès non autorisé - Vérifiez vos permissions';
+    } else if (error.status === 0) {
+      message = 'Impossible de contacter le serveur';
+    }
+
+    this.errorMessage = message;
+
+    // Essayer un fallback avec des données de test si disponibles
+    this.tryFallbackData();
+  }
+
+  private tryFallbackData() {
+    console.log('🔄 Tentative de récupération de données de fallback...');
+
+    // Vous pouvez implémenter ici une logique de fallback
+    // Par exemple, utiliser des données en cache ou une API alternative
+
+    // Pour l'instant, initialiser avec des données vides mais valides
+    this.utilisateurs = [];
+    this.appliquerFiltres();
+    this.calculerStatistiques();
   }
 
   // ===== FILTRAGE ET RECHERCHE =====
@@ -139,10 +196,10 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
     if (this.filtreRecherche) {
       const terme = this.filtreRecherche.toLowerCase();
       utilisateursFiltres = utilisateursFiltres.filter(u =>
-        u.nom?.toLowerCase().includes(terme) ||
-        u.prenom?.toLowerCase().includes(terme) ||
-        u.email?.toLowerCase().includes(terme) ||
-        u.nomComplet?.toLowerCase().includes(terme)
+        (u.nom || '').toLowerCase().includes(terme) ||
+        (u.prenom || '').toLowerCase().includes(terme) ||
+        (u.email || '').toLowerCase().includes(terme) ||
+        (u.nomComplet || '').toLowerCase().includes(terme)
       );
     }
 
@@ -189,6 +246,8 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       v2: this.utilisateurs.filter(u => u.role === 'V2').length,
       t1: this.utilisateurs.filter(u => u.role === 'T1').length
     };
+
+    console.log('📊 Statistiques calculées:', this.stats);
   }
 
   // ===== GESTION DES MODALS =====
@@ -205,7 +264,7 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       prenom: utilisateur.prenom || '',
       email: utilisateur.email || '',
       role: utilisateur.role || 'U1',
-      actif: utilisateur.actif,
+      actif: utilisateur.actif !== undefined ? utilisateur.actif : true,
       nouveauMotDePasse: ''
     };
     this.showEditModal = true;
@@ -243,6 +302,8 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       return;
     }
 
+    console.log('🆕 Création d\'un utilisateur:', this.userForm);
+
     const userData = {
       nom: this.userForm.nom,
       prenom: this.userForm.prenom,
@@ -255,11 +316,13 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('✅ Utilisateur créé:', response);
           this.successMessage = 'Utilisateur créé avec succès';
           this.fermerModals();
           this.chargerUtilisateurs();
         },
         error: (error) => {
+          console.error('❌ Erreur création utilisateur:', error);
           this.errorMessage = error.message || 'Erreur lors de la création de l\'utilisateur';
         }
       });
@@ -269,6 +332,8 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
     if (!this.utilisateurSelectionne || !this.validerFormulaire()) {
       return;
     }
+
+    console.log('🔄 Modification utilisateur:', this.utilisateurSelectionne.id, this.userForm);
 
     const userData = {
       nom: this.userForm.nom,
@@ -283,11 +348,13 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('✅ Utilisateur modifié:', response);
           this.successMessage = 'Utilisateur modifié avec succès';
           this.fermerModals();
           this.chargerUtilisateurs();
         },
         error: (error) => {
+          console.error('❌ Erreur modification utilisateur:', error);
           this.errorMessage = error.message || 'Erreur lors de la modification de l\'utilisateur';
         }
       });
@@ -298,15 +365,19 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       return;
     }
 
+    console.log('🗑️ Suppression utilisateur:', this.utilisateurSelectionne.id);
+
     this.userService.supprimerUtilisateur(this.utilisateurSelectionne.id!)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('✅ Utilisateur supprimé:', response);
           this.successMessage = 'Utilisateur supprimé avec succès';
           this.fermerModals();
           this.chargerUtilisateurs();
         },
         error: (error) => {
+          console.error('❌ Erreur suppression utilisateur:', error);
           this.errorMessage = error.message || 'Erreur lors de la suppression de l\'utilisateur';
         }
       });
@@ -314,6 +385,8 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
 
   changerStatut(utilisateur: UserDto) {
     const nouveauStatut = !utilisateur.actif;
+
+    console.log('🔄 Changement de statut:', utilisateur.id, nouveauStatut);
 
     const userData = {
       nom: utilisateur.nom || '',
@@ -327,10 +400,12 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('✅ Statut changé:', response);
           this.successMessage = `Utilisateur ${nouveauStatut ? 'activé' : 'désactivé'} avec succès`;
           this.chargerUtilisateurs();
         },
         error: (error) => {
+          console.error('❌ Erreur changement statut:', error);
           this.errorMessage = error.message || 'Erreur lors du changement de statut';
         }
       });
@@ -400,14 +475,17 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
   }
 
   actualiser() {
+    console.log('🔄 Actualisation des données...');
     this.chargerUtilisateurs();
   }
 
   exporterDonnees() {
+    console.log('📤 Export des données...');
+
     const donnees = this.utilisateursFiltres.map(u => ({
-      nom: u.nom,
-      prenom: u.prenom,
-      email: u.email,
+      nom: u.nom || '',
+      prenom: u.prenom || '',
+      email: u.email || '',
       role: this.getRoleLabel(u.role || ''),
       statut: u.actif ? 'Actif' : 'Inactif',
       nbFactures: (u.nbFacturesCreees || 0) + (u.nbFacturesValideesN1 || 0) +
@@ -422,6 +500,42 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+
+    console.log('✅ Export terminé:', exportFileDefaultName);
+  }
+
+  // ===== MÉTHODES DE DEBUG =====
+
+  debugUtilisateurs() {
+    console.log('🔍 Debug des utilisateurs...');
+
+    this.userService.debugUsers()?.subscribe({
+      next: (results) => {
+        console.log('📊 Résultats debug:', results);
+        alert('Vérifiez la console pour les résultats de debug');
+      },
+      error: (error) => {
+        console.error('❌ Erreur debug:', error);
+      }
+    });
+  }
+
+  testConnexion() {
+    console.log('🔗 Test de connexion...');
+
+    // Test simple de l'API
+    this.userService.getValidateursV1()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          console.log('✅ Connexion OK:', data);
+          this.successMessage = 'Connexion au serveur OK';
+        },
+        error: (error) => {
+          console.error('❌ Erreur connexion:', error);
+          this.errorMessage = 'Erreur de connexion: ' + error.message;
+        }
+      });
   }
 
   // ===== TRACK BY FUNCTION =====
@@ -431,4 +545,85 @@ export class GestionUtilisateursComponent implements OnInit, OnDestroy {
 
   // Expose Math for template
   Math = Math;
+
+  // ===== MÉTHODES POUR LE TEMPLATE =====
+
+  /**
+   * Méthode sécurisée pour obtenir le nombre total d'actions d'un utilisateur
+   */
+  getTotalActions(utilisateur: UserDto): number {
+    try {
+      return (utilisateur.nbFacturesCreees || 0) +
+        (utilisateur.nbFacturesValideesN1 || 0) +
+        (utilisateur.nbFacturesValideesN2 || 0) +
+        (utilisateur.nbFacturesTraitees || 0);
+    } catch (error) {
+      console.warn('⚠️ Erreur calcul total actions pour utilisateur:', utilisateur.id, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Méthode pour formater le nom complet de façon sécurisée
+   */
+  formatNomComplet(utilisateur: UserDto): string {
+    try {
+      if (utilisateur.nomComplet && utilisateur.nomComplet.trim()) {
+        return utilisateur.nomComplet;
+      }
+
+      const prenom = utilisateur.prenom || '';
+      const nom = utilisateur.nom || '';
+
+      if (prenom && nom) {
+        return `${prenom} ${nom}`;
+      } else if (nom) {
+        return nom;
+      } else if (prenom) {
+        return prenom;
+      } else {
+        return utilisateur.email || 'Utilisateur';
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur formatage nom pour utilisateur:', utilisateur.id, error);
+      return utilisateur.email || 'Utilisateur';
+    }
+  }
+
+  /**
+   * Méthode pour vérifier si un utilisateur peut être supprimé
+   */
+  peutSupprimerUtilisateur(utilisateur: UserDto): boolean {
+    try {
+      // Ne pas pouvoir supprimer si l'utilisateur a des factures associées
+      const totalFactures = this.getTotalActions(utilisateur);
+      return totalFactures === 0;
+    } catch (error) {
+      console.warn('⚠️ Erreur vérification suppression pour utilisateur:', utilisateur.id, error);
+      return false;
+    }
+  }
+
+  /**
+   * Méthode pour obtenir un tooltip explicatif pour les boutons désactivés
+   */
+  getTooltipSuppression(utilisateur: UserDto): string {
+    try {
+      const totalFactures = this.getTotalActions(utilisateur);
+      if (totalFactures > 0) {
+        return `Impossible de supprimer: ${totalFactures} facture(s) associée(s)`;
+      }
+      return 'Supprimer cet utilisateur';
+    } catch (error) {
+      return 'Suppression non disponible';
+    }
+  }
+
+  /**
+   * Méthode pour gérer les erreurs d'affichage de manière gracieuse
+   */
+  handleDisplayError(error: any, context: string): string {
+    console.warn(`⚠️ Erreur d'affichage dans ${context}:`, error);
+    return 'Erreur d affichage';
+  }
 }

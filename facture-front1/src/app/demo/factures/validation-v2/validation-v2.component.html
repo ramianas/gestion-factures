@@ -1,0 +1,490 @@
+<!-- Fichier: facture-front1/src/app/demo/factures/validation-v2/validation-v2.component.html -->
+
+<div class="validation-v2-container">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="page-title">
+          <i class="fas fa-check-double me-2"></i>
+          Validation Niveau 2
+        </h2>
+        <p class="page-subtitle">Factures validées par V1 en attente de votre validation finale ({{ currentUser?.nomComplet }})</p>
+      </div>
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="actualiser()"
+          [disabled]="isLoading">
+          <i class="fas fa-sync-alt me-1" [class.fa-spin]="isLoading"></i>
+          Actualiser
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''" aria-label="Fermer">&times;</button>
+  </div>
+
+  <!-- Messages de succès -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''" aria-label="Fermer">&times;</button>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="stat-card urgent">
+        <div class="stat-icon bg-danger">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.urgent }}</h3>
+          <p>Urgentes</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-info">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.enAttente }}</h3>
+          <p>En attente V2</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-success">
+          <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.validees }}</h3>
+          <p>Validées V2</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-secondary">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.rejetees }}</h3>
+          <p>Rejetées</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des factures en attente V2 -->
+  <app-card cardTitle="Factures en attente de validation V2" [showContent]="true">
+    <ng-template #headerTitleTemplate>
+      <i class="fas fa-list-check me-2"></i>
+    </ng-template>
+
+    <!-- État de chargement -->
+    <div *ngIf="isLoading" class="loading-state text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Chargement...</span>
+      </div>
+      <p class="mt-3">Chargement des factures...</p>
+    </div>
+
+    <!-- Aucune facture -->
+    <div *ngIf="!isLoading && facturesEnAttente.length === 0" class="empty-state text-center py-5">
+      <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+      <h5>Aucune facture en attente</h5>
+      <p class="text-muted">
+        Toutes les factures validées par V1 qui vous sont assignées ont été traitées.
+      </p>
+      <button type="button" class="btn btn-outline-primary mt-2" (click)="actualiser()">
+        <i class="fas fa-sync-alt me-1"></i>
+        Vérifier de nouveau
+      </button>
+    </div>
+
+    <!-- Tableau des factures -->
+    <div *ngIf="!isLoading && facturesEnAttente.length > 0" class="table-responsive">
+      <table class="table table-hover">
+        <thead class="table-light">
+        <tr>
+          <th class="text-center">Urgence</th>
+          <th>Numéro</th>
+          <th>Fournisseur</th>
+          <th class="text-end">Montant TTC</th>
+          <th>Validé V1</th>
+          <th>Échéance</th>
+          <th>Créateur</th>
+          <th>Validateur V1</th>
+          <th class="text-center">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let facture of facturesEnAttente; trackBy: trackByFactureId"
+            [class.table-warning]="isFactureUrgente(facture)"
+            [class.table-danger]="isFactureEnRetard(facture)">
+
+          <!-- Urgence -->
+          <td class="text-center">
+            <i [class]="getUrgenceIcon(facture)"
+               [ngClass]="getUrgenceClass(facture)"
+               [attr.title]="getUrgenceTexte(facture)"></i>
+          </td>
+
+          <!-- Numéro -->
+          <td>
+            <strong class="facture-numero">{{ facture.numero }}</strong>
+            <br>
+            <small class="badge bg-info">Validé V1</small>
+          </td>
+
+          <!-- Fournisseur -->
+          <td>
+            <div class="fournisseur-info">
+              <div class="nom">{{ facture.nomFournisseur }}</div>
+              <small class="text-muted" *ngIf="facture.designation">
+                {{ facture.designation.length > 50 ? (facture.designation | slice:0:50) + '...' : facture.designation }}
+              </small>
+            </div>
+          </td>
+
+          <!-- Montant -->
+          <td class="text-end">
+            <strong class="text-primary montant">{{ formatMontant(facture.montantTTC || 0) }}</strong>
+            <br>
+            <small class="text-muted">HT: {{ formatMontant(facture.montantHT || 0) }}</small>
+          </td>
+
+          <!-- Date Validation V1 -->
+          <td>
+            <div class="validation-info">
+              <i class="fas fa-check text-success me-1"></i>
+              {{ formatDate(facture.dateValidationV1 || '') }}
+              <br>
+              <small class="text-muted">{{ formatDateDiff(facture.dateValidationV1 || '') }}</small>
+            </div>
+          </td>
+
+          <!-- Échéance -->
+          <td>
+            <div class="echeance-info" [ngClass]="getUrgenceClass(facture)">
+              <div class="date">{{ formatDate(facture.dateEcheance || '') }}</div>
+              <small class="urgence-text">{{ getUrgenceTexte(facture) }}</small>
+            </div>
+          </td>
+
+          <!-- Créateur -->
+          <td>
+            <div class="createur-info">
+              <small class="nom">{{ facture.createurNom }}</small>
+              <br>
+              <small class="text-muted">Créée le {{ formatDate(facture.dateCreation || '') }}</small>
+            </div>
+          </td>
+
+          <!-- Validateur V1 -->
+          <td>
+            <div class="validateur-info">
+              <small class="nom">{{ facture.validateur1Nom }}</small>
+              <br>
+              <small class="text-success">
+                <i class="fas fa-check-circle me-1"></i>
+                Validé V1
+              </small>
+            </div>
+          </td>
+
+          <!-- Actions -->
+          <td class="text-center">
+            <div class="btn-group" role="group" aria-label="Actions de validation V2">
+              <!-- Voir détails -->
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-info"
+                (click)="voirDetailsFacture(facture)"
+                [attr.title]="'Voir les détails de la facture ' + facture.numero">
+                <i class="fas fa-eye"></i>
+              </button>
+
+              <!-- Approuver (envoyer en trésorerie) -->
+              <button
+                type="button"
+                class="btn btn-sm btn-success"
+                (click)="ouvrirModalValidation(facture, 'approve')"
+                [attr.title]="'Approuver et envoyer en trésorerie la facture ' + facture.numero">
+                <i class="fas fa-check-double"></i>
+              </button>
+
+              <!-- Rejeter -->
+              <button
+                type="button"
+                class="btn btn-sm btn-danger"
+                (click)="ouvrirModalValidation(facture, 'reject')"
+                [attr.title]="'Rejeter la facture ' + facture.numero">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-card>
+</div>
+
+<!-- Modal de validation V2 -->
+<div class="modal fade"
+     [class.show]="showValidationModal"
+     [style.display]="showValidationModal ? 'block' : 'none'"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="validationV2ModalLabel"
+     aria-hidden="!showValidationModal"
+     *ngIf="showValidationModal">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+
+      <!-- En-tête du modal -->
+      <div class="modal-header" [ngClass]="{
+        'bg-success text-white': modalType === 'approve',
+        'bg-danger text-white': modalType === 'reject'
+      }">
+        <h5 class="modal-title" id="validationV2ModalLabel">
+          <i class="fas" [ngClass]="{
+            'fa-check-double': modalType === 'approve',
+            'fa-times-circle': modalType === 'reject'
+          }" class="me-2"></i>
+          {{ modalType === 'approve' ? 'Approuver pour la trésorerie' : 'Rejeter' }} la facture
+        </h5>
+        <button type="button"
+                class="btn-close btn-close-white"
+                (click)="fermerModal()"
+                aria-label="Fermer">
+        </button>
+      </div>
+
+      <!-- Corps du modal -->
+      <div class="modal-body" *ngIf="factureSelected">
+
+        <!-- Informations de la facture -->
+        <div class="facture-info mb-4">
+          <h6 class="section-title">
+            <i class="fas fa-file-invoice me-2"></i>
+            Informations de la facture
+          </h6>
+          <div class="info-grid">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="info-item">
+                  <label>Numéro:</label>
+                  <span class="value">{{ factureSelected.numero }}</span>
+                </div>
+                <div class="info-item">
+                  <label>Fournisseur:</label>
+                  <span class="value">{{ factureSelected.nomFournisseur }}</span>
+                </div>
+                <div class="info-item">
+                  <label>Montant TTC:</label>
+                  <span class="value text-primary">{{ formatMontant(factureSelected.montantTTC || 0) }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-item">
+                  <label>Date facture:</label>
+                  <span class="value">{{ formatDate(factureSelected.dateFacture || '') }}</span>
+                </div>
+                <div class="info-item">
+                  <label>Échéance:</label>
+                  <span class="value" [ngClass]="getUrgenceClass(factureSelected)">
+                    {{ formatDate(factureSelected.dateEcheance || '') }}
+                  </span>
+                </div>
+                <div class="info-item">
+                  <label>Créateur:</label>
+                  <span class="value">{{ factureSelected.createurNom }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Informations de validation V1 -->
+            <div class="row mt-3">
+              <div class="col-12">
+                <div class="validation-v1-info bg-light p-3 rounded">
+                  <h6 class="text-success mb-2">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Validation Niveau 1 effectuée
+                  </h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="info-item">
+                        <label>Date validation V1:</label>
+                        <span class="value">{{ formatDate(factureSelected.dateValidationV1 || '') }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mt-3" *ngIf="factureSelected.designation">
+              <div class="col-12">
+                <div class="info-item">
+                  <label>Désignation:</label>
+                  <span class="value">{{ factureSelected.designation }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mt-3" *ngIf="factureSelected.commentaires">
+              <div class="col-12">
+                <div class="info-item">
+                  <label>Commentaires du créateur:</label>
+                  <span class="value text-muted">{{ factureSelected.commentaires }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages d'erreur/succès dans le modal -->
+        <div *ngIf="errorMessage" class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div *ngIf="successMessage" class="alert alert-success">
+          <i class="fas fa-check-circle me-2"></i>
+          {{ successMessage }}
+        </div>
+
+        <!-- Formulaire de validation V2 -->
+        <form [formGroup]="validationForm" (ngSubmit)="validerFacture()" *ngIf="!successMessage">
+
+          <!-- Decision (caché car déjà déterminée par le bouton cliqué) -->
+          <input type="hidden" formControlName="decision">
+
+          <!-- Commentaire de validation V2 -->
+          <div class="mb-3">
+            <label for="commentaire" class="form-label required">
+              <i class="fas" [ngClass]="{
+                'fa-comment-check': modalType === 'approve',
+                'fa-comment-times': modalType === 'reject'
+              }" class="me-2"></i>
+              {{ modalType === 'approve' ? 'Commentaire de validation finale' : 'Motif de rejet final' }}
+            </label>
+            <textarea
+              id="commentaire"
+              class="form-control"
+              formControlName="commentaire"
+              rows="4"
+              [placeholder]="modalType === 'approve'
+                ? 'Exemple: Facture conforme après double contrôle, validée pour traitement par la trésorerie...'
+                : 'Exemple: Erreur détectée lors du contrôle niveau 2, nécessite correction...'"
+              [class.is-invalid]="validationForm.get('commentaire')?.invalid && validationForm.get('commentaire')?.touched">
+            </textarea>
+
+            <!-- Messages d'erreur pour le commentaire -->
+            <div class="invalid-feedback" *ngIf="validationForm.get('commentaire')?.invalid && validationForm.get('commentaire')?.touched">
+              <div *ngIf="validationForm.get('commentaire')?.errors?.['required']">
+                Le commentaire de validation finale est obligatoire
+              </div>
+              <div *ngIf="validationForm.get('commentaire')?.errors?.['minlength']">
+                Le commentaire doit contenir au moins 10 caractères
+              </div>
+              <div *ngIf="validationForm.get('commentaire')?.errors?.['maxlength']">
+                Le commentaire ne peut pas dépasser 500 caractères
+              </div>
+            </div>
+
+            <!-- Information sur l'impact de la validation -->
+            <div class="form-text">
+              <div class="alert alert-info mt-2 p-2" *ngIf="modalType === 'approve'">
+                <i class="fas fa-info-circle me-2"></i>
+                <small>
+                  <strong>Impact :</strong> Cette facture sera envoyée à la trésorerie pour traitement du paiement.
+                </small>
+              </div>
+              <div class="alert alert-warning mt-2 p-2" *ngIf="modalType === 'reject'">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small>
+                  <strong>Impact :</strong> Cette facture sera rejetée et renvoyée au créateur avec vos commentaires.
+                </small>
+              </div>
+            </div>
+
+            <!-- Compteur de caractères -->
+            <div class="form-text d-flex justify-content-between">
+              <small class="text-muted">
+                {{ modalType === 'approve'
+                ? 'Validez après avoir effectué tous les contrôles niveau 2'
+                : 'Détaillez les motifs du rejet pour faciliter la correction'
+                }}
+              </small>
+              <small [class]="(validationForm.get('commentaire')?.value || '').length > 450 ? 'text-warning' : 'text-muted'">
+                {{ (validationForm.get('commentaire')?.value || '').length }}/500 caractères
+              </small>
+            </div>
+          </div>
+        </form>
+
+        <!-- Message de confirmation après validation réussie -->
+        <div *ngIf="successMessage" class="text-center py-3">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <p class="mb-0">La validation sera fermée automatiquement...</p>
+        </div>
+      </div>
+
+      <!-- Pied du modal -->
+      <div class="modal-footer" *ngIf="!successMessage">
+        <button type="button"
+                class="btn btn-secondary"
+                (click)="fermerModal()"
+                [disabled]="isProcessing">
+          <i class="fas fa-times me-1"></i>
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn validation-btn"
+          [ngClass]="{
+            'btn-success': modalType === 'approve',
+            'btn-danger': modalType === 'reject'
+          }"
+          (click)="validerFacture()"
+          [disabled]="validationForm.invalid || isProcessing">
+
+          <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i *ngIf="!isProcessing" class="fas" [ngClass]="{
+            'fa-check-double': modalType === 'approve',
+            'fa-times': modalType === 'reject'
+          }" class="me-2"></i>
+
+          <span *ngIf="!isProcessing">
+            {{ modalType === 'approve' ? 'Confirmer et envoyer en trésorerie' : 'Confirmer le rejet' }}
+          </span>
+          <span *ngIf="isProcessing">
+            {{ modalType === 'approve' ? 'Envoi en trésorerie...' : 'Rejet en cours...' }}
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay du modal -->
+<div class="modal-backdrop fade"
+     [class.show]="showValidationModal"
+     *ngIf="showValidationModal"
+     (click)="fermerModal()">
+</div>

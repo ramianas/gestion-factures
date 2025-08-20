@@ -51,31 +51,86 @@ export class UserService {
     private authService: AuthService
   ) {}
 
-  // ===== GESTION DES UTILISATEURS (ADMIN) =====
+  // ===== GESTION DES UTILISATEURS =====
 
   getAllUsers(): Observable<UserDto[]> {
-    return this.http.get<UserDto[]>(`${this.apiUrl}/admin/users`, {
+    console.log('🔍 Récupération des utilisateurs via API simplifiée');
+
+    // Essayer d'abord l'API simplifiée
+    return this.http.get<any>(`${this.apiUrl}/simple/users`, {
       headers: this.getAuthHeaders()
     }).pipe(
-      map(response => this.mapUsersResponse(response)),
+      map(response => {
+        console.log('✅ Réponse API simple reçue:', response);
+        return this.mapUsersResponse(response);
+      }),
+      catchError(error => {
+        console.warn('⚠️ Erreur API simple, essai API standard...', error);
+        // Fallback vers l'API standard
+        return this.getStandardUsers();
+      })
+    );
+  }
+
+  private getStandardUsers(): Observable<UserDto[]> {
+    return this.http.get<any>(`${this.apiUrl}/users`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Réponse API standard reçue:', response);
+        return this.mapUsersResponse(response);
+      }),
+      catchError(error => {
+        console.warn('⚠️ Erreur API standard, essai API admin...', error);
+        return this.getAdminUsers();
+      })
+    );
+  }
+
+  private getAdminUsers(): Observable<UserDto[]> {
+    return this.http.get<any>(`${this.apiUrl}/admin/users`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Réponse admin reçue:', response);
+        return this.mapUsersResponse(response);
+      }),
       catchError(this.handleError)
     );
   }
 
   getUserById(id: number): Observable<UserDto> {
-    return this.http.get<any>(`${this.apiUrl}/admin/users/${id}`, {
+    console.log('🔍 Récupération utilisateur ID:', id);
+
+    return this.http.get<any>(`${this.apiUrl}/users/${id}`, {
       headers: this.getAuthHeaders()
     }).pipe(
-      map(response => this.mapUserResponse(response)),
-      catchError(this.handleError)
+      map(response => {
+        console.log('✅ Utilisateur reçu:', response);
+        return this.mapUserResponse(response);
+      }),
+      catchError(error => {
+        console.error('❌ Erreur getUserById:', error);
+        // Fallback vers l'API admin
+        return this.http.get<any>(`${this.apiUrl}/admin/users/${id}`, {
+          headers: this.getAuthHeaders()
+        }).pipe(
+          map(response => this.mapUserResponse(response)),
+          catchError(this.handleError)
+        );
+      })
     );
   }
 
   creerUtilisateur(userData: UserCreateDto): Observable<any> {
+    console.log('🆕 Création utilisateur:', userData);
+
+    // Utiliser l'API admin pour la création (seuls les admins peuvent créer)
     return this.http.post<any>(`${this.apiUrl}/admin/users`, userData, {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
+        console.log('✅ Utilisateur créé:', response);
         if (response.success) {
           return response;
         }
@@ -86,10 +141,14 @@ export class UserService {
   }
 
   modifierUtilisateur(id: number, userData: UserUpdateDto): Observable<any> {
+    console.log('🔄 Modification utilisateur ID:', id, userData);
+
+    // Utiliser l'API admin pour la modification (seuls les admins peuvent modifier)
     return this.http.put<any>(`${this.apiUrl}/admin/users/${id}`, userData, {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
+        console.log('✅ Utilisateur modifié:', response);
         if (response.success) {
           return response;
         }
@@ -100,10 +159,14 @@ export class UserService {
   }
 
   supprimerUtilisateur(id: number): Observable<any> {
+    console.log('🗑️ Suppression utilisateur ID:', id);
+
+    // Utiliser l'API admin pour la suppression (seuls les admins peuvent supprimer)
     return this.http.delete<any>(`${this.apiUrl}/admin/users/${id}`, {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => {
+        console.log('✅ Utilisateur supprimé:', response);
         if (response.success) {
           return response;
         }
@@ -116,10 +179,22 @@ export class UserService {
   // ===== STATISTIQUES =====
 
   getStatistiquesUtilisateurs(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/admin/statistiques`, {
+    console.log('📊 Récupération des statistiques');
+
+    return this.http.get<any>(`${this.apiUrl}/users/statistiques`, {
       headers: this.getAuthHeaders()
     }).pipe(
-      catchError(this.handleError)
+      catchError(error => {
+        console.warn('⚠️ Erreur stats users, essai admin...');
+        return this.http.get<any>(`${this.apiUrl}/admin/statistiques`, {
+          headers: this.getAuthHeaders()
+        });
+      }),
+      catchError(error => {
+        console.error('❌ Impossible de récupérer les statistiques');
+        // Retourner des stats par défaut
+        return throwError(() => new Error('Statistiques indisponibles'));
+      })
     );
   }
 
@@ -172,22 +247,31 @@ export class UserService {
   }
 
   private mapUsersResponse(response: any): UserDto[] {
-    // Si c'est déjà un tableau, le retourner tel quel
-    if (Array.isArray(response)) {
-      return response.map(u => this.mapUserData(u));
-    }
+    console.log('🔄 Mapping de la réponse utilisateurs:', response);
 
-    // Si c'est un objet avec une propriété data
-    if (response && response.data && Array.isArray(response.data)) {
-      return response.data.map((u: any) => this.mapUserData(u));
-    }
+    try {
+      // Si c'est déjà un tableau, le retourner tel quel
+      if (Array.isArray(response)) {
+        return response.map(u => this.mapUserData(u));
+      }
 
-    // Si c'est un objet simple, le traiter comme un utilisateur unique
-    if (response && typeof response === 'object') {
-      return [this.mapUserData(response)];
-    }
+      // Si c'est un objet avec une propriété data
+      if (response && response.data && Array.isArray(response.data)) {
+        return response.data.map((u: any) => this.mapUserData(u));
+      }
 
-    return [];
+      // Si c'est un objet simple, le traiter comme un utilisateur unique
+      if (response && typeof response === 'object') {
+        return [this.mapUserData(response)];
+      }
+
+      console.warn('⚠️ Format de réponse inattendu:', response);
+      return [];
+
+    } catch (error) {
+      console.error('❌ Erreur lors du mapping des utilisateurs:', error);
+      return [];
+    }
   }
 
   private mapUserResponse(response: any): UserDto {
@@ -198,23 +282,41 @@ export class UserService {
   }
 
   private mapUserData(data: any): UserDto {
-    return {
-      id: data.id,
-      nom: data.nom || '',
-      prenom: data.prenom || '',
-      email: data.email || '',
-      role: data.role || 'U1',
-      actif: data.actif !== undefined ? data.actif : true,
-      nomComplet: data.nomComplet || `${data.prenom || ''} ${data.nom || ''}`.trim(),
-      nbFacturesCreees: data.nbFacturesCreees || 0,
-      nbFacturesValideesN1: data.nbFacturesValideesN1 || 0,
-      nbFacturesValideesN2: data.nbFacturesValideesN2 || 0,
-      nbFacturesTraitees: data.nbFacturesTraitees || 0
-    };
+    try {
+      return {
+        id: data.id || null,
+        nom: data.nom || '',
+        prenom: data.prenom || '',
+        email: data.email || '',
+        role: data.role || 'U1',
+        actif: data.actif !== undefined ? data.actif : true,
+        nomComplet: data.nomComplet || `${data.prenom || ''} ${data.nom || ''}`.trim(),
+        nbFacturesCreees: data.nbFacturesCreees || data.nbFacturesCreees || 0,
+        nbFacturesValideesN1: data.nbFacturesValideesN1 || data.nbFacturesValidéesN1 || 0,
+        nbFacturesValideesN2: data.nbFacturesValideesN2 || data.nbFacturesValidéesN2 || 0,
+        nbFacturesTraitees: data.nbFacturesTraitees || data.nbFacturesTraitées || 0
+      };
+    } catch (error) {
+      console.error('❌ Erreur mapping user data:', error, data);
+      // Retourner un objet minimal en cas d'erreur
+      return {
+        id: data.id || null,
+        nom: data.nom || 'Erreur',
+        prenom: '',
+        email: data.email || '',
+        role: 'U1',
+        actif: true,
+        nomComplet: 'Erreur de mapping',
+        nbFacturesCreees: 0,
+        nbFacturesValideesN1: 0,
+        nbFacturesValideesN2: 0,
+        nbFacturesTraitees: 0
+      };
+    }
   }
 
   private handleError = (error: any): Observable<never> => {
-    console.error('Erreur UserService:', error);
+    console.error('❌ Erreur UserService:', error);
 
     let errorMessage = 'Une erreur s\'est produite';
 
@@ -230,10 +332,60 @@ export class UserService {
       errorMessage = 'Accès non autorisé';
     } else if (error.status === 404) {
       errorMessage = 'Ressource non trouvée';
+    } else if (error.status === 500) {
+      errorMessage = 'Erreur serveur - ' + (error.error?.message || 'Erreur interne');
     } else if (error.status >= 500) {
       errorMessage = 'Erreur serveur, veuillez réessayer plus tard';
     }
 
     return throwError(() => new Error(errorMessage));
   };
+
+  // ===== MÉTHODES DE DEBUG =====
+
+  debugUsers(): Observable<any> {
+    console.log('🔍 Debug: Test de tous les endpoints utilisateurs');
+
+    const endpoints = [
+      { name: 'simple/users', url: `${this.apiUrl}/simple/users` },
+      { name: 'users', url: `${this.apiUrl}/users` },
+      { name: 'admin/users', url: `${this.apiUrl}/admin/users` },
+      { name: 'simple/test/connection', url: `${this.apiUrl}/simple/test/connection` }
+    ];
+
+    const results: any = {};
+
+    const promises = endpoints.map(endpoint => {
+      return this.http.get(endpoint.url, { headers: this.getAuthHeaders() })
+        .toPromise()
+        .then(response => {
+          results[endpoint.name] = { success: true, data: response };
+          console.log(`✅ ${endpoint.name}:`, response);
+        })
+        .catch(error => {
+          results[endpoint.name] = { success: false, error: error.message, status: error.status };
+          console.error(`❌ ${endpoint.name}:`, error);
+        });
+    });
+
+    return new Observable(observer => {
+      Promise.all(promises).then(() => {
+        observer.next(results);
+        observer.complete();
+      });
+    });
+  }
+
+  testSimpleConnection(): Observable<any> {
+    console.log('🔗 Test de connexion simple');
+
+    return this.http.get(`${this.apiUrl}/simple/test/connection`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(error => {
+        console.error('❌ Erreur test connexion simple:', error);
+        return throwError(() => error);
+      })
+    );
+  }
 }

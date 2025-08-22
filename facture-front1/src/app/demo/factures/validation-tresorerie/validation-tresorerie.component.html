@@ -1,0 +1,501 @@
+<!-- validation-tresorerie.component.html -->
+<div class="tresorerie-container">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Trésorerie - Validation des Paiements</h1>
+      <p class="page-subtitle">Gestion des factures validées en attente de paiement</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" (click)="exporterFactures()">
+        <i class="icon-download"></i>
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des factures...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!loading">
+    <!-- Statistiques -->
+    <div class="stats-grid">
+      <div class="stat-card stat-en-attente">
+        <div class="stat-icon">
+          <i class="icon-clock"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ statistiques.enAttente }}</h3>
+          <p>En attente</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-urgent">
+        <div class="stat-icon">
+          <i class="icon-alert-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ statistiques.urgent }}</h3>
+          <p>Urgentes</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-montant">
+        <div class="stat-icon">
+          <i class="icon-dollar-sign"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ formatMontant(statistiques.montantTotal) }}</h3>
+          <p>Montant total</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-traitees">
+        <div class="stat-icon">
+          <i class="icon-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>{{ statistiques.traitees }}</h3>
+          <p>Traitées</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-card">
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Recherche</label>
+          <div class="input-with-icon">
+            <i class="icon-search"></i>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Numéro, fournisseur..."
+              [(ngModel)]="filtres.recherche"
+            >
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>Montant min</label>
+          <input
+            type="number"
+            class="form-control"
+            placeholder="0"
+            [(ngModel)]="filtres.montantMin"
+          >
+        </div>
+
+        <div class="filter-group">
+          <label>Montant max</label>
+          <input
+            type="number"
+            class="form-control"
+            placeholder="999999"
+            [(ngModel)]="filtres.montantMax"
+          >
+        </div>
+
+        <div class="filter-group">
+          <label>Échéance du</label>
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="filtres.dateEcheanceDebut"
+          >
+        </div>
+
+        <div class="filter-group">
+          <label>Échéance au</label>
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="filtres.dateEcheanceFin"
+          >
+        </div>
+
+        <div class="filter-group">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [(ngModel)]="filtres.urgentesOnly"
+            >
+            Urgentes uniquement
+          </label>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn btn-secondary" (click)="resetFiltres()">
+            Réinitialiser
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'en-attente'"
+          (click)="activeTab = 'en-attente'"
+        >
+          Factures en attente ({{ facturesFiltrees.length }})
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'traitees'"
+          (click)="activeTab = 'traitees'"
+        >
+          Factures traitées ({{ facturesTraitees.length }})
+        </button>
+      </div>
+
+      <div class="tab-content">
+        <!-- Onglet Factures en attente -->
+        <div *ngIf="activeTab === 'en-attente'">
+          <div *ngIf="facturesFiltrees.length === 0" class="empty-state">
+            <i class="icon-file-text"></i>
+            <h3>Aucune facture en attente</h3>
+            <p>Toutes les factures ont été traitées ou aucune ne correspond aux filtres.</p>
+          </div>
+
+          <div *ngIf="facturesFiltrees.length > 0" class="factures-list">
+            <div
+              *ngFor="let facture of facturesFiltrees; trackBy: trackByFactureId"
+              class="facture-card"
+              [class.urgent]="facture.urgent || facture.joursAvantEcheance <= 5"
+            >
+              <div class="facture-header">
+                <div class="facture-title">
+                  <h3>{{ facture.numero }}</h3>
+                  <span
+                    class="status-badge"
+                    [ngClass]="getStatutBadgeClass(facture.urgent, facture.joursAvantEcheance)"
+                  >
+                    {{ getStatutBadgeText(facture.urgent, facture.joursAvantEcheance) }}
+                  </span>
+                </div>
+                <div class="facture-actions">
+                  <button
+                    class="btn-icon"
+                    (click)="ouvrirModalDetails(facture)"
+                    title="Voir détails"
+                  >
+                    <i class="icon-eye"></i>
+                  </button>
+                  <button
+                    *ngIf="facture.pieceJointeNom"
+                    class="btn-icon"
+                    (click)="voirPieceJointe(facture)"
+                    title="Voir pièce jointe"
+                  >
+                    <i class="icon-paperclip"></i>
+                  </button>
+                  <button
+                    class="btn btn-primary"
+                    (click)="ouvrirModalPaiement(facture)"
+                  >
+                    <i class="icon-dollar-sign"></i>
+                    Traiter le paiement
+                  </button>
+                </div>
+              </div>
+
+              <div class="facture-details">
+                <div class="detail-item">
+                  <span class="label">Fournisseur:</span>
+                  <span class="value">{{ facture.nomFournisseur }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Montant TTC:</span>
+                  <span class="value montant">{{ formatMontant(facture.montantTTC) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Échéance:</span>
+                  <span
+                    class="value"
+                    [class.text-danger]="facture.joursAvantEcheance <= 5"
+                  >
+                    {{ formatDate(facture.dateEcheance) }}
+                    <small>({{ facture.joursAvantEcheance }} jours)</small>
+                  </span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Validé V2 le:</span>
+                  <span class="value">{{ formatDateHeure(facture.dateValidationV2) }}</span>
+                </div>
+              </div>
+
+              <div class="facture-workflow">
+                <div class="workflow-step completed">
+                  <i class="icon-user"></i>
+                  <span>{{ facture.createurNom }}</span>
+                </div>
+                <div class="workflow-step completed">
+                  <i class="icon-check"></i>
+                  <span>{{ facture.validateur1Nom }}</span>
+                </div>
+                <div class="workflow-step completed">
+                  <i class="icon-check-circle"></i>
+                  <span>{{ facture.validateur2Nom }}</span>
+                </div>
+                <div class="workflow-step current">
+                  <i class="icon-dollar-sign"></i>
+                  <span>En attente de paiement</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Onglet Factures traitées -->
+        <div *ngIf="activeTab === 'traitees'">
+          <div *ngIf="facturesTraitees.length === 0" class="empty-state">
+            <i class="icon-check-circle"></i>
+            <h3>Aucune facture traitée</h3>
+            <p>Les factures payées apparaîtront ici.</p>
+          </div>
+
+          <div *ngIf="facturesTraitees.length > 0" class="factures-list">
+            <div
+              *ngFor="let facture of facturesTraitees; trackBy: trackByFactureId"
+              class="facture-card facture-payee"
+            >
+              <div class="facture-header">
+                <div class="facture-title">
+                  <h3>{{ facture.numero }}</h3>
+                  <span class="status-badge badge-payee">Payée</span>
+                </div>
+              </div>
+
+              <div class="facture-details">
+                <div class="detail-item">
+                  <span class="label">Fournisseur:</span>
+                  <span class="value">{{ facture.nomFournisseur }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Montant TTC:</span>
+                  <span class="value montant">{{ formatMontant(facture.montantTTC) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Date paiement:</span>
+                  <span class="value">{{ formatDate(facture.datePaiement) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">Référence:</span>
+                  <span class="value reference">{{ facture.referencePaiement }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de paiement -->
+<div *ngIf="showPaiementModal" class="modal-overlay" (click)="resetPaiementModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Traiter le paiement - {{ selectedFacture?.numero }}</h3>
+      <button class="btn-close" (click)="resetPaiementModal()">
+        <i class="icon-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="facture-summary">
+        <p><strong>Fournisseur:</strong> {{ selectedFacture?.nomFournisseur }}</p>
+        <p><strong>Montant:</strong> {{ formatMontant(selectedFacture?.montantTTC || 0) }}</p>
+        <p><strong>Échéance:</strong> {{ formatDate(selectedFacture?.dateEcheance || '') }}</p>
+      </div>
+
+      <form (ngSubmit)="traiterPaiement()" #paiementForm="ngForm">
+        <div class="form-group">
+          <label for="referencePaiement" class="required">Référence de paiement</label>
+          <input
+            type="text"
+            id="referencePaiement"
+            class="form-control"
+            placeholder="PAY2024-XXX"
+            [(ngModel)]="paiementForm.referencePaiement"
+            name="referencePaiement"
+            required
+            #refPaiement="ngModel"
+          >
+          <div *ngIf="refPaiement.invalid && refPaiement.touched" class="error-message">
+            La référence de paiement est obligatoire
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="datePaiement">Date de paiement</label>
+          <input
+            type="date"
+            id="datePaiement"
+            class="form-control"
+            [(ngModel)]="paiementForm.datePaiement"
+            name="datePaiement"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="commentaire">Commentaire (optionnel)</label>
+          <textarea
+            id="commentaire"
+            class="form-control"
+            rows="3"
+            placeholder="Commentaire sur le paiement..."
+            [(ngModel)]="paiementForm.commentaire"
+            name="commentaire"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="resetPaiementModal()"
+            [disabled]="processingPaiement"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="!paiementForm.referencePaiement.trim() || processingPaiement"
+          >
+            <span *ngIf="processingPaiement" class="spinner-small"></span>
+            {{ processingPaiement ? 'Traitement...' : 'Valider le paiement' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal détails -->
+<div *ngIf="showDetailsModal && selectedFacture" class="modal-overlay" (click)="fermerModalDetails()">
+  <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Détails de la facture {{ selectedFacture.numero }}</h3>
+      <button class="btn-close" (click)="fermerModalDetails()">
+        <i class="icon-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="details-grid">
+        <!-- Informations générales -->
+        <div class="details-section">
+          <h4>Informations générales</h4>
+          <div class="detail-row">
+            <span class="detail-label">Numéro:</span>
+            <span class="detail-value">{{ selectedFacture.numero }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Fournisseur:</span>
+            <span class="detail-value">{{ selectedFacture.nomFournisseur }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Désignation:</span>
+            <span class="detail-value">{{ selectedFacture.designation }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Référence commande:</span>
+            <span class="detail-value">{{ selectedFacture.refCommande }}</span>
+          </div>
+        </div>
+
+        <!-- Montants et dates -->
+        <div class="details-section">
+          <h4>Montants et dates</h4>
+          <div class="detail-row">
+            <span class="detail-label">Montant HT:</span>
+            <span class="detail-value">{{ formatMontant(selectedFacture.montantHT) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Montant TTC:</span>
+            <span class="detail-value montant-highlight">{{ formatMontant(selectedFacture.montantTTC) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date facture:</span>
+            <span class="detail-value">{{ formatDate(selectedFacture.dateFacture) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date échéance:</span>
+            <span
+              class="detail-value"
+              [class.text-danger]="selectedFacture.joursAvantEcheance <= 5"
+            >
+              {{ formatDate(selectedFacture.dateEcheance) }}
+              <small>({{ selectedFacture.joursAvantEcheance }} jours)</small>
+            </span>
+          </div>
+        </div>
+
+        <!-- Workflow de validation -->
+        <div class="details-section">
+          <h4>Workflow de validation</h4>
+          <div class="detail-row">
+            <span class="detail-label">Créé par:</span>
+            <span class="detail-value">{{ selectedFacture.createurNom }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Validé V1 par:</span>
+            <span class="detail-value">{{ selectedFacture.validateur1Nom }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Validé V2 par:</span>
+            <span class="detail-value">{{ selectedFacture.validateur2Nom }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date validation V2:</span>
+            <span class="detail-value">{{ formatDateHeure(selectedFacture.dateValidationV2) }}</span>
+          </div>
+        </div>
+
+        <!-- Statut -->
+        <div class="details-section">
+          <h4>Statut</h4>
+          <div class="status-info">
+            <div class="status-item status-ready">
+              <i class="icon-check-circle"></i>
+              <span>Prête pour paiement</span>
+            </div>
+            <div
+              *ngIf="selectedFacture.urgent || selectedFacture.joursAvantEcheance <= 5"
+              class="status-item status-urgent"
+            >
+              <i class="icon-alert-circle"></i>
+              <span>Paiement urgent requis</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          class="btn btn-secondary"
+          (click)="fermerModalDetails()"
+        >
+          Fermer
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="fermerModalDetails(); ouvrirModalPaiement(selectedFacture)"
+        >
+          <i class="icon-dollar-sign"></i>
+          Traiter le paiement
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

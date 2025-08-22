@@ -1,8 +1,8 @@
 // Fichier: facture-front1/src/app/demo/factures/services/facture.service.ts
 
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
+import {Observable, of, throwError} from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
@@ -130,14 +130,14 @@ export class FactureService {
     );
   }
 
-  getFacturesEnAttenteTresorerie(): Observable<Facture[]> {
+  /*getFacturesEnAttenteTresorerie(): Observable<Facture[]> {
     return this.http.get<Facture[]>(`${this.apiUrl}/en-attente-tresorerie`, {
       headers: this.getAuthHeaders()
     }).pipe(
       map(response => this.mapFacturesResponse(response)),
       catchError(this.handleError)
     );
-  }
+  }*/
 
   getMesTaches(): Observable<Facture[]> {
     return this.http.get<Facture[]>(`${this.apiUrl}/mes-taches`, {
@@ -435,7 +435,278 @@ export class FactureService {
 
   // ===== MÉTHODES D'AIDE POUR LE COMPOSANT =====
 
-  trackByFactureId(index: number, facture: Facture): any {
+  /*trackByFactureId(index: number, facture: Facture): any {
+    return facture.id;
+  }*/
+
+
+  // Ajouts à faire dans votre facture.service.ts existant
+
+// ===== MÉTHODES POUR TRÉSORERIE (à ajouter) =====
+
+  /**
+   * Récupère les factures en attente de traitement par la trésorerie
+   */
+  getFacturesEnAttenteTresorerie(): Observable<Facture[]> {
+    return this.http.get<Facture[]>(`${this.apiUrl}/en-attente-tresorerie`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => this.mapFacturesResponse(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Traite le paiement d'une facture par la trésorerie
+   */
+  traiterFactureTresorerie(factureId: number, referencePaiement: string, datePaiement?: string, commentaire?: string): Observable<any> {
+    const paiementData = {
+      referencePaiement,
+      datePaiement: datePaiement || new Date().toISOString().split('T')[0],
+      commentaire: commentaire || ''
+    };
+
+    return this.http.post<any>(`${this.apiUrl}/${factureId}/payer`, paiementData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        if (response.success) {
+          return response;
+        }
+        throw new Error(response.message || 'Erreur lors du traitement du paiement');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Récupère les factures par statut
+   */
+  getFacturesParStatut(statut: string): Observable<Facture[]> {
+    return this.http.get<Facture[]>(`${this.apiUrl}?statut=${statut}`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => this.mapFacturesResponse(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Récupère les statistiques de la trésorerie
+   */
+  getStatistiquesTresorerie(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/statistiques-tresorerie`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(error => {
+        console.error('Erreur lors de la récupération des statistiques trésorerie:', error);
+        return of({
+          enAttente: 0,
+          urgent: 0,
+          montantTotal: 0,
+          traitees: 0,
+          moyenneDelaiPaiement: 0
+        });
+      })
+    );
+  }
+
+  /**
+   * Exporte les factures en attente de paiement
+   */
+  exporterFacturesTresorerie(format: 'csv' | 'excel' = 'csv'): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export-tresorerie?format=${format}`, {
+      headers: this.getAuthHeaders(),
+      responseType: 'blob'
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Récupère l'historique des paiements
+   */
+  getHistoriquePaiements(limit: number = 50): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/historique-paiements?limit=${limit}`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(error => {
+        console.error('Erreur lors de la récupération de l\'historique:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Recherche de factures avec filtres avancés pour la trésorerie
+   */
+  rechercherFacturesTresorerie(filtres: any): Observable<Facture[]> {
+    let params = new HttpParams();
+
+    Object.keys(filtres).forEach(key => {
+      const value = filtres[key];
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, value.toString());
+      }
+    });
+
+    return this.http.get<Facture[]>(`${this.apiUrl}/recherche-tresorerie`, {
+      params: params,
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => this.mapFacturesResponse(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Valide en lot plusieurs factures
+   */
+  traiterPaiementEnLot(factureIds: number[], referencePaiementBase: string, commentaire?: string): Observable<any> {
+    const paiementLotData = {
+      factureIds,
+      referencePaiementBase,
+      datePaiement: new Date().toISOString().split('T')[0],
+      commentaire: commentaire || ''
+    };
+
+    return this.http.post<any>(`${this.apiUrl}/payer-lot`, paiementLotData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        if (response.success) {
+          return response;
+        }
+        throw new Error(response.message || 'Erreur lors du traitement en lot');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Génère un rapport de trésorerie
+   */
+  genererRapportTresorerie(dateDebut: string, dateFin: string): Observable<any> {
+    const params = new HttpParams()
+      .set('dateDebut', dateDebut)
+      .set('dateFin', dateFin);
+
+    return this.http.get<any>(`${this.apiUrl}/rapport-tresorerie`, {
+      params: params,
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(error => {
+        console.error('Erreur lors de la génération du rapport:', error);
+        return of({
+          success: false,
+          message: 'Erreur lors de la génération du rapport'
+        });
+      })
+    );
+  }
+
+  /**
+   * Récupère les factures urgentes pour la trésorerie
+   */
+  getFacturesUrgentesTresorerie(): Observable<Facture[]> {
+    return this.http.get<Facture[]>(`${this.apiUrl}/urgentes-tresorerie`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => this.mapFacturesResponse(response)),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Marque une facture comme prioritaire
+   */
+  marquerCommePrioritaire(factureId: number, prioritaire: boolean): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${factureId}/priorite`,
+      { prioritaire },
+      { headers: this.getAuthHeaders() }
+    ).pipe(
+      map(response => {
+        if (response.success) {
+          return response;
+        }
+        throw new Error(response.message || 'Erreur lors de la modification de la priorité');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Ajoute un commentaire trésorerie à une facture
+   */
+  ajouterCommentaireTresorerie(factureId: number, commentaire: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${factureId}/commentaire-tresorerie`,
+      { commentaire },
+      { headers: this.getAuthHeaders() }
+    ).pipe(
+      map(response => {
+        if (response.success) {
+          return response;
+        }
+        throw new Error(response.message || 'Erreur lors de l\'ajout du commentaire');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Récupère les données pour le tableau de bord trésorerie
+   */
+  getTableauBordTresorerie(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/tableau-bord-tresorerie`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        return {
+          facturesEnAttente: response.facturesEnAttente || 0,
+          facturesUrgentes: response.facturesUrgentes || 0,
+          montantTotalEnAttente: response.montantTotalEnAttente || 0,
+          facturesPayeesAujourdhui: response.facturesPayeesAujourdhui || 0,
+          montantPayeAujourdhui: response.montantPayeAujourdhui || 0,
+          moyenneDelaiPaiement: response.moyenneDelaiPaiement || 0,
+          evolutionPaiements: response.evolutionPaiements || [],
+          topFournisseurs: response.topFournisseurs || []
+        };
+      }),
+      catchError(error => {
+        console.error('Erreur tableau de bord trésorerie:', error);
+        return of({
+          facturesEnAttente: 0,
+          facturesUrgentes: 0,
+          montantTotalEnAttente: 0,
+          facturesPayeesAujourdhui: 0,
+          montantPayeAujourdhui: 0,
+          moyenneDelaiPaiement: 0,
+          evolutionPaiements: [],
+          topFournisseurs: []
+        });
+      })
+    );
+  }
+
+  /**
+   * Télécharge la pièce jointe d'une facture
+   */
+  telechargerPieceJointe(factureId: number, nomFichier: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${factureId}/piece-jointe/${nomFichier}`, {
+      headers: this.getAuthHeaders(),
+      responseType: 'blob'
+    }).pipe(
+      catchError(error => {
+        console.error('Erreur téléchargement pièce jointe:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Méthode utilitaire pour le tracking des factures dans les listes
+   */
+  trackByFactureId(index: number, facture: any): any {
     return facture.id;
   }
 }

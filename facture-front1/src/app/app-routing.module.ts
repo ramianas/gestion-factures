@@ -58,7 +58,7 @@ const routes: Routes = [
       },
       {
         path: 'factures/tresorerie',
-        loadComponent: () => import('./demo/others/sample-page/sample-page.component').then((c) => c.SamplePageComponent),
+        loadComponent: () => import('./demo/factures/validation-tresorerie/validation-tresorerie.component').then((c) => c.ValidationTresorerieComponent),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['T1'] } // Seuls les trésoriers
       },

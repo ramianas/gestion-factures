@@ -293,13 +293,14 @@ public interface FactureRepository extends JpaRepository<Facture, Long> {
             "ORDER BY YEAR(f.datePaiement) DESC, MONTH(f.datePaiement) DESC")
     List<Object[]> getEvolutionPaiementsParMois(@Param("dateDebut") LocalDate dateDebut);
 
-    /**
-     * Délai moyen de paiement
-     */
-    @Query("SELECT AVG(EXTRACT(DAY FROM (f.datePaiement - f.dateValidationV2))) as delaiMoyen " +
-            "FROM Facture f " +
-            "WHERE f.statut = 'PAYEE' AND f.datePaiement IS NOT NULL AND f.dateValidationV2 IS NOT NULL " +
-            "AND f.datePaiement >= :dateDebut")
+    @Query(value = """
+    select avg(extract(day from (f.date_paiement - f.date_validation_v2)))
+    from daf_factures f
+    where f.statut = 'PAYEE'
+      and f.date_paiement is not null
+      and f.date_validation_v2 is not null
+      and f.date_paiement >= :dateDebut
+""", nativeQuery = true)
     Double getDelaiMoyenPaiement(@Param("dateDebut") LocalDate dateDebut);
 
     /**

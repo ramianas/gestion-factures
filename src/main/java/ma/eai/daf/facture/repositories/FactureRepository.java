@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,11 +42,22 @@ public interface FactureRepository extends JpaRepository<Facture, Long> {
 
     List<Facture> findByValidateur1OrderByDateCreationDesc(User validateur1);
 
-    // ✅ CORRIGER
-    @Query("SELECT f FROM Facture f WHERE f.validateur1 = :validateur AND f.statut = 'EN_VALIDATION_V1'")
+    /**
+     * Factures en attente V1 pour un validateur spécifique
+     * REQUÊTE CORRIGÉE
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_VALIDATION_V1' AND " +
+            "(f.validateur1 = :validateur OR f.validateur1 IS NULL) " +
+            "ORDER BY f.dateCreation DESC")
     List<Facture> findFacturesEnAttenteV1(@Param("validateur") User validateur);
 
-    @Query("SELECT f FROM Facture f WHERE f.validateur2 = :validateur AND f.statut = 'EN_VALIDATION_V2'")
+    /**
+     * Factures en attente V2 pour un validateur spécifique
+     * REQUÊTE CORRIGÉE
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_VALIDATION_V2' AND " +
+            "(f.validateur2 = :validateur OR f.validateur2 IS NULL) " +
+            "ORDER BY f.dateCreation DESC")
     List<Facture> findFacturesEnAttenteV2(@Param("validateur") User validateur);
 
     // Factures assignées à un validateur V2
@@ -59,9 +71,20 @@ public interface FactureRepository extends JpaRepository<Facture, Long> {
 
     List<Facture> findByTresorierOrderByDateCreationDesc(User tresorier);
 
-    @Query("SELECT f FROM Facture f WHERE f.tresorier = :tresorier AND f.statut = 'EN_TRESORERIE'")
+    /**
+     * Factures en attente trésorerie pour un trésorier spécifique
+     * REQUÊTE CORRIGÉE avec gestion nullable
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' AND " +
+            "(f.tresorier = :tresorier OR f.tresorier IS NULL) " +
+            "ORDER BY f.dateCreation DESC")
     List<Facture> findFacturesEnAttenteTresorerie(@Param("tresorier") User tresorier);
-
+    /**
+     * Toutes les factures en attente trésorerie (sans filtre par trésorier)
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' " +
+            "ORDER BY f.dateCreation DESC")
+    List<Facture> findToutesFacturesEnAttenteTresorerie();
     // ===== RECHERCHE PAR COMBINAISONS STATUT/UTILISATEUR =====
 
     List<Facture> findByStatutAndCreateur(StatutFacture statut, User createur);
@@ -192,4 +215,146 @@ public interface FactureRepository extends JpaRepository<Facture, Long> {
             "GROUP BY u.id, u.nom, u.prenom " +
             "ORDER BY COUNT(f) DESC")
     List<Object[]> getPerformanceValidateursV2();
+    /**
+     * Statistiques pour le tableau de bord trésorerie
+     */
+    @Query("SELECT " +
+            "COUNT(CASE WHEN f.statut = 'EN_TRESORERIE' THEN 1 END) as enAttente, " +
+            "COUNT(CASE WHEN f.statut = 'EN_TRESORERIE' AND f.dateEcheance <= :dateLimiteUrgent THEN 1 END) as urgent, " +
+            "COALESCE(SUM(CASE WHEN f.statut = 'EN_TRESORERIE' THEN f.montantTTC ELSE 0 END), 0) as montantTotal, " +
+            "COUNT(CASE WHEN f.statut = 'PAYEE' AND f.datePaiement >= :debutMois THEN 1 END) as traitees " +
+            "FROM Facture f")
+    Object[] getStatistiquesTresorerie(@Param("dateLimiteUrgent") LocalDate dateLimiteUrgent,
+                                       @Param("debutMois") LocalDate debutMois);
+
+    /**
+     * Factures par montant pour la trésorerie (pour priorisation)
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' AND " +
+            "f.montantTTC >= :montantMin " +
+            "ORDER BY f.montantTTC DESC, f.dateEcheance ASC")
+    List<Facture> findFacturesTresorerieParMontant(@Param("montantMin") BigDecimal montantMin);
+
+    /**
+     * Recherche de factures pour la trésorerie avec filtres
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' AND " +
+            "(:recherche IS NULL OR " +
+            " LOWER(f.numero) LIKE LOWER(CONCAT('%', :recherche, '%')) OR " +
+            " LOWER(f.nomFournisseur) LIKE LOWER(CONCAT('%', :recherche, '%'))) AND " +
+            "(:montantMin IS NULL OR f.montantTTC >= :montantMin) AND " +
+            "(:montantMax IS NULL OR f.montantTTC <= :montantMax) AND " +
+            "(:dateEcheanceDebut IS NULL OR f.dateEcheance >= :dateEcheanceDebut) AND " +
+            "(:dateEcheanceFin IS NULL OR f.dateEcheance <= :dateEcheanceFin) AND " +
+            "(:urgentesOnly = false OR f.dateEcheance <= :dateLimiteUrgent) " +
+            "ORDER BY f.dateEcheance ASC, f.dateCreation DESC")
+    List<Facture> findFacturesTresorerieAvecFiltres(@Param("recherche") String recherche,
+                                                    @Param("montantMin") BigDecimal montantMin,
+                                                    @Param("montantMax") BigDecimal montantMax,
+                                                    @Param("dateEcheanceDebut") LocalDate dateEcheanceDebut,
+                                                    @Param("dateEcheanceFin") LocalDate dateEcheanceFin,
+                                                    @Param("urgentesOnly") boolean urgentesOnly,
+                                                    @Param("dateLimiteUrgent") LocalDate dateLimiteUrgent);
+
+    /**
+     * Performance des trésoriers (nombre de factures traitées)
+     */
+    @Query("SELECT u.nom, u.prenom, COUNT(f) as nombrePaiements, " +
+            "COALESCE(SUM(f.montantTTC), 0) as montantTotal " +
+            "FROM User u LEFT JOIN u.facturesTraitees f " +
+            "WHERE u.role = 'T1' AND u.actif = true AND " +
+            "(f.datePaiement IS NULL OR f.datePaiement >= :dateDebut) " +
+            "GROUP BY u.id, u.nom, u.prenom " +
+            "ORDER BY COUNT(f) DESC")
+    List<Object[]> getPerformanceTresoriers(@Param("dateDebut") LocalDate dateDebut);
+
+    /**
+     * Top fournisseurs par montant en attente trésorerie
+     */
+    @Query("SELECT f.nomFournisseur, COUNT(f) as nombreFactures, " +
+            "COALESCE(SUM(f.montantTTC), 0) as montantTotal " +
+            "FROM Facture f " +
+            "WHERE f.statut = 'EN_TRESORERIE' " +
+            "GROUP BY f.nomFournisseur " +
+            "ORDER BY SUM(f.montantTTC) DESC")
+    List<Object[]> getTopFournisseursEnAttenteTresorerie();
+
+    /**
+     * Évolution des paiements par mois
+     */
+    @Query("SELECT " +
+            "YEAR(f.datePaiement) as annee, " +
+            "MONTH(f.datePaiement) as mois, " +
+            "COUNT(f) as nombrePaiements, " +
+            "COALESCE(SUM(f.montantTTC), 0) as montantTotal " +
+            "FROM Facture f " +
+            "WHERE f.statut = 'PAYEE' AND f.datePaiement >= :dateDebut " +
+            "GROUP BY YEAR(f.datePaiement), MONTH(f.datePaiement) " +
+            "ORDER BY YEAR(f.datePaiement) DESC, MONTH(f.datePaiement) DESC")
+    List<Object[]> getEvolutionPaiementsParMois(@Param("dateDebut") LocalDate dateDebut);
+
+    /**
+     * Délai moyen de paiement
+     */
+    @Query("SELECT AVG(EXTRACT(DAY FROM (f.datePaiement - f.dateValidationV2))) as delaiMoyen " +
+            "FROM Facture f " +
+            "WHERE f.statut = 'PAYEE' AND f.datePaiement IS NOT NULL AND f.dateValidationV2 IS NOT NULL " +
+            "AND f.datePaiement >= :dateDebut")
+    Double getDelaiMoyenPaiement(@Param("dateDebut") LocalDate dateDebut);
+
+    /**
+     * Factures avec pièces jointes pour la trésorerie
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' AND " +
+            "f.pieceJointeNom IS NOT NULL " +
+            "ORDER BY f.dateCreation DESC")
+    List<Facture> findFacturesTresorerieAvecPiecesJointes();
+
+    /**
+     * Vérification si une facture peut être payée
+     */
+    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END " +
+            "FROM Facture f " +
+            "WHERE f.id = :factureId AND f.statut = 'EN_TRESORERIE'")
+    boolean peutEtrePayee(@Param("factureId") Long factureId);
+
+    /**
+     * Factures assignées à un trésorier spécifique
+     */
+    @Query("SELECT f FROM Facture f WHERE f.tresorier = :tresorier AND " +
+            "f.statut IN ('EN_TRESORERIE', 'PAYEE') " +
+            "ORDER BY f.dateCreation DESC")
+    List<Facture> findFacturesAssigneesAuTresorier(@Param("tresorier") User tresorier);
+
+    /**
+     * Nombre de factures en attente par trésorier
+     */
+    @Query("SELECT u.id, u.nom, u.prenom, COUNT(f) as nombreEnAttente " +
+            "FROM User u LEFT JOIN u.facturesTraitees f " +
+            "WHERE u.role = 'T1' AND u.actif = true AND " +
+            "(f.statut IS NULL OR f.statut = 'EN_TRESORERIE') " +
+            "GROUP BY u.id, u.nom, u.prenom " +
+            "ORDER BY COUNT(f) ASC")
+    List<Object[]> getNombreFacturesParTresorier();
+    /**
+     * Données pour export trésorerie
+     */
+    @Query("SELECT f.numero, f.nomFournisseur, f.designation, f.montantHT, f.montantTTC, " +
+            "f.dateFacture, f.dateEcheance, f.dateValidationV2, " +
+            "f.createur.nom, f.createur.prenom, " +
+            "f.validateur1.nom, f.validateur1.prenom, " +
+            "f.validateur2.nom, f.validateur2.prenom " +
+            "FROM Facture f " +
+            "WHERE f.statut = 'EN_TRESORERIE' " +
+            "ORDER BY f.dateEcheance ASC, f.dateCreation DESC")
+    List<Object[]> getDonneesExportTresorerie();
+
+    // ===== REQUÊTES DE NETTOYAGE =====
+
+    /**
+     * Factures orphelines (sans trésorier assigné)
+     */
+    @Query("SELECT f FROM Facture f WHERE f.statut = 'EN_TRESORERIE' AND f.tresorier IS NULL")
+    List<Facture> findFacturesOrphelinesTresorerie();
+
 }

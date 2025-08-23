@@ -329,6 +329,29 @@ export class FactureService {
       'Authorization': token ? `Bearer ${token}` : ''
     });
   }
+  private handleError = (error: any): Observable<never> => {
+    console.error('❌ Erreur FactureService:', error);
+
+    let errorMessage = 'Une erreur s\'est produite';
+
+    if (error.error?.message) {
+      errorMessage = error.error.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    } else if (error.status === 0) {
+      errorMessage = 'Impossible de contacter le serveur';
+    } else if (error.status === 401) {
+      errorMessage = 'Session expirée, veuillez vous reconnecter';
+    } else if (error.status === 403) {
+      errorMessage = 'Accès non autorisé';
+    } else if (error.status === 404) {
+      errorMessage = 'Facture non trouvée';
+    } else if (error.status >= 500) {
+      errorMessage = 'Erreur serveur, veuillez réessayer plus tard';
+    }
+
+    return throwError(() => new Error(errorMessage));
+  };
 
   private mapFacturesResponse(response: any): Facture[] {
     // Si c'est déjà un tableau, le retourner tel quel
@@ -409,29 +432,7 @@ export class FactureService {
     };
   }
 
-  private handleError = (error: any): Observable<never> => {
-    console.error('Erreur FactureService:', error);
 
-    let errorMessage = 'Une erreur s\'est produite';
-
-    if (error.error?.message) {
-      errorMessage = error.error.message;
-    } else if (error.message) {
-      errorMessage = error.message;
-    } else if (error.status === 0) {
-      errorMessage = 'Impossible de contacter le serveur';
-    } else if (error.status === 401) {
-      errorMessage = 'Session expirée, veuillez vous reconnecter';
-    } else if (error.status === 403) {
-      errorMessage = 'Accès non autorisé';
-    } else if (error.status === 404) {
-      errorMessage = 'Ressource non trouvée';
-    } else if (error.status >= 500) {
-      errorMessage = 'Erreur serveur, veuillez réessayer plus tard';
-    }
-
-    return throwError(() => new Error(errorMessage));
-  };
 
   // ===== MÉTHODES D'AIDE POUR LE COMPOSANT =====
 
@@ -447,12 +448,68 @@ export class FactureService {
   /**
    * Récupère les factures en attente de traitement par la trésorerie
    */
-  getFacturesEnAttenteTresorerie(): Observable<Facture[]> {
-    return this.http.get<Facture[]>(`${this.apiUrl}/en-attente-tresorerie`, {
+  getFacturesEnAttenteTresorerie(): Observable<any[]> {
+    console.log('🔍 Récupération des factures en attente trésorerie');
+
+    const url = `${this.apiUrl}/en-attente-tresorerie`;
+
+    return this.http.get<any>(url, {
       headers: this.getAuthHeaders()
     }).pipe(
-      map(response => this.mapFacturesResponse(response)),
-      catchError(this.handleError)
+      map(response => {
+        console.log('✅ Réponse factures trésorerie:', response);
+
+        // Gérer différents formats de réponse
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          return response.data;
+        } else if (response && typeof response === 'object') {
+          return [response];
+        }
+
+        return [];
+      }),
+      catchError(error => {
+        console.error('❌ Erreur récupération factures trésorerie:', error);
+        return throwError(() => new Error('Erreur lors de la récupération des factures'));
+      })
+    );
+  }
+  /**
+   * Traite le paiement d'une facture par le trésorier
+   */
+  traiterParTresorier(factureId: number, paiementData: any): Observable<any> {
+    console.log('💰 Traitement paiement facture:', factureId, paiementData);
+
+    const url = `${this.apiUrl}/${factureId}/payer`;
+
+    return this.http.post<any>(url, paiementData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Réponse traitement paiement:', response);
+
+        if (response && response.success) {
+          return response;
+        } else if (response) {
+          return { success: true, ...response };
+        }
+
+        throw new Error('Réponse invalide du serveur');
+      }),
+      catchError(error => {
+        console.error('❌ Erreur traitement paiement:', error);
+
+        let errorMessage = 'Erreur lors du traitement du paiement';
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        return throwError(() => new Error(errorMessage));
+      })
     );
   }
 
@@ -482,24 +539,131 @@ export class FactureService {
   /**
    * Récupère les factures par statut
    */
-  getFacturesParStatut(statut: string): Observable<Facture[]> {
-    return this.http.get<Facture[]>(`${this.apiUrl}?statut=${statut}`, {
+  getFacturesParStatut(statut: string): Observable<any[]> {
+    console.log('🔍 Récupération des factures par statut:', statut);
+
+    // Utilise l'endpoint générique ou spécialisé selon le statut
+    let url = `${this.apiUrl}`;
+
+    switch (statut) {
+      case 'PAYEE':
+        // Peut nécessiter un endpoint spécialisé
+        url += `?statut=${statut}`;
+        break;
+      case 'EN_TRESORERIE':
+        url += '/en-attente-tresorerie';
+        break;
+      default:
+        url += `?statut=${statut}`;
+    }
+
+    return this.http.get<any>(url, {
       headers: this.getAuthHeaders()
     }).pipe(
-      map(response => this.mapFacturesResponse(response)),
-      catchError(this.handleError)
+      map(response => {
+        console.log(`✅ Réponse factures ${statut}:`, response);
+
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          return response.data;
+        }
+
+        return [];
+      }),
+      catchError(error => {
+        console.error(`❌ Erreur récupération factures ${statut}:`, error);
+        return of([]); // Retourner un tableau vide en cas d'erreur
+      })
+    );
+  }
+  /**
+   * Génère une référence de paiement pour une facture
+   */
+  genererReferencePaiement(factureId: number): Observable<string> {
+    console.log('🔢 Génération référence paiement pour facture:', factureId);
+
+    const url = `${this.apiUrl}/${factureId}/generer-reference-paiement`;
+
+    return this.http.get<any>(url, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Référence générée:', response);
+
+        if (response && response.referencePaiement) {
+          return response.referencePaiement;
+        } else if (response && typeof response === 'string') {
+          return response;
+        }
+
+        // Fallback: générer côté client
+        const now = new Date();
+        const annee = now.getFullYear();
+        const mois = String(now.getMonth() + 1).padStart(2, '0');
+        const jour = String(now.getDate()).padStart(2, '0');
+        return `PAY${annee}${mois}${jour}-${factureId}`;
+      }),
+      catchError(error => {
+        console.warn('⚠️ Erreur génération référence, fallback côté client:', error);
+
+        // Fallback: générer côté client
+        const now = new Date();
+        const annee = now.getFullYear();
+        const mois = String(now.getMonth() + 1).padStart(2, '0');
+        const jour = String(now.getDate()).padStart(2, '0');
+        const reference = `PAY${annee}${mois}${jour}-${factureId}`;
+
+        return of(reference);
+      })
+    );
+  }
+  /**
+   * Vérifie si une facture peut être traitée par le trésorier connecté
+   */
+  peutEtrePayee(factureId: number): Observable<boolean> {
+    console.log('🔍 Vérification si facture peut être payée:', factureId);
+
+    const url = `${this.apiUrl}/${factureId}/peut-etre-payee`;
+
+    return this.http.get<any>(url, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Vérification paiement:', response);
+
+        if (response && typeof response.peutEtreTraitee === 'boolean') {
+          return response.peutEtreTraitee;
+        } else if (response && response.success) {
+          return true;
+        }
+
+        return false;
+      }),
+      catchError(error => {
+        console.warn('⚠️ Erreur vérification paiement:', error);
+        return of(false);
+      })
     );
   }
 
   /**
-   * Récupère les statistiques de la trésorerie
+   * Récupère les statistiques pour le tableau de bord trésorerie
    */
   getStatistiquesTresorerie(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/statistiques-tresorerie`, {
+    console.log('📊 Récupération des statistiques trésorerie');
+
+    const url = `${this.apiUrl}/statistiques-tresorerie`;
+
+    return this.http.get<any>(url, {
       headers: this.getAuthHeaders()
     }).pipe(
+      map(response => {
+        console.log('✅ Statistiques trésorerie:', response);
+        return response || {};
+      }),
       catchError(error => {
-        console.error('Erreur lors de la récupération des statistiques trésorerie:', error);
+        console.warn('⚠️ Erreur statistiques trésorerie, valeurs par défaut:', error);
         return of({
           enAttente: 0,
           urgent: 0,
@@ -512,14 +676,21 @@ export class FactureService {
   }
 
   /**
-   * Exporte les factures en attente de paiement
+   * Export des factures en attente de trésorerie
    */
   exporterFacturesTresorerie(format: 'csv' | 'excel' = 'csv'): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/export-tresorerie?format=${format}`, {
+    console.log('📤 Export factures trésorerie format:', format);
+
+    const url = `${this.apiUrl}/export-tresorerie?format=${format}`;
+
+    return this.http.get(url, {
       headers: this.getAuthHeaders(),
       responseType: 'blob'
     }).pipe(
-      catchError(this.handleError)
+      catchError(error => {
+        console.error('❌ Erreur export factures trésorerie:', error);
+        return throwError(() => new Error('Erreur lors de l\'export'));
+      })
     );
   }
 
@@ -527,12 +698,47 @@ export class FactureService {
    * Récupère l'historique des paiements
    */
   getHistoriquePaiements(limit: number = 50): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/historique-paiements?limit=${limit}`, {
+    console.log('📚 Récupération historique paiements, limite:', limit);
+
+    const url = `${this.apiUrl}/historique-paiements?limit=${limit}`;
+
+    return this.http.get<any[]>(url, {
       headers: this.getAuthHeaders()
     }).pipe(
+      map(response => {
+        console.log('✅ Historique paiements:', response);
+        return Array.isArray(response) ? response : [];
+      }),
       catchError(error => {
-        console.error('Erreur lors de la récupération de l\'historique:', error);
+        console.warn('⚠️ Erreur historique paiements:', error);
         return of([]);
+      })
+    );
+  }
+  /**
+   * Traite plusieurs factures en lot (paiement groupé)
+   */
+  traiterPaiementsEnLot(factureIds: number[], referencePaiementBase: string, commentaire?: string): Observable<any> {
+    console.log('💰 Traitement paiements en lot:', factureIds.length, 'factures');
+
+    const url = `${this.apiUrl}/payer-lot`;
+    const data = {
+      factureIds,
+      referencePaiementBase,
+      datePaiement: new Date().toISOString().split('T')[0],
+      commentaire: commentaire || ''
+    };
+
+    return this.http.post<any>(url, data, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Paiements en lot traités:', response);
+        return response;
+      }),
+      catchError(error => {
+        console.error('❌ Erreur paiements en lot:', error);
+        return throwError(() => new Error('Erreur lors du traitement en lot'));
       })
     );
   }
@@ -621,17 +827,43 @@ export class FactureService {
    * Marque une facture comme prioritaire
    */
   marquerCommePrioritaire(factureId: number, prioritaire: boolean): Observable<any> {
-    return this.http.patch<any>(`${this.apiUrl}/${factureId}/priorite`,
-      { prioritaire },
-      { headers: this.getAuthHeaders() }
-    ).pipe(
+    console.log('⭐ Marquage priorité facture:', factureId, prioritaire);
+
+    const url = `${this.apiUrl}/${factureId}/priorite`;
+    const data = { prioritaire };
+
+    return this.http.patch<any>(url, data, {
+      headers: this.getAuthHeaders()
+    }).pipe(
       map(response => {
-        if (response.success) {
-          return response;
-        }
-        throw new Error(response.message || 'Erreur lors de la modification de la priorité');
+        console.log('✅ Priorité mise à jour:', response);
+        return response;
       }),
-      catchError(this.handleError)
+      catchError(error => {
+        console.error('❌ Erreur mise à jour priorité:', error);
+        return throwError(() => new Error('Erreur lors de la mise à jour de la priorité'));
+      })
+    );
+  }
+  /**
+   * Récupère les détails d'une facture spécifique
+   */
+  getDetailFacture(factureId: number): Observable<any> {
+    console.log('🔍 Récupération détails facture:', factureId);
+
+    const url = `${this.apiUrl}/${factureId}`;
+
+    return this.http.get<any>(url, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        console.log('✅ Détails facture:', response);
+        return response;
+      }),
+      catchError(error => {
+        console.error('❌ Erreur récupération détails facture:', error);
+        return throwError(() => new Error('Erreur lors de la récupération des détails'));
+      })
     );
   }
 
@@ -689,19 +921,24 @@ export class FactureService {
   }
 
   /**
-   * Télécharge la pièce jointe d'une facture
+   * Télécharge une pièce jointe de facture
    */
   telechargerPieceJointe(factureId: number, nomFichier: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${factureId}/piece-jointe/${nomFichier}`, {
+    console.log('📎 Téléchargement pièce jointe:', factureId, nomFichier);
+
+    const url = `${this.apiUrl}/${factureId}/piece-jointe/${nomFichier}`;
+
+    return this.http.get(url, {
       headers: this.getAuthHeaders(),
       responseType: 'blob'
     }).pipe(
       catchError(error => {
-        console.error('Erreur téléchargement pièce jointe:', error);
-        throw error;
+        console.error('❌ Erreur téléchargement pièce jointe:', error);
+        return throwError(() => new Error('Erreur lors du téléchargement'));
       })
     );
   }
+
 
   /**
    * Méthode utilitaire pour le tracking des factures dans les listes
@@ -709,4 +946,121 @@ export class FactureService {
   trackByFactureId(index: number, facture: any): any {
     return facture.id;
   }
+  /**
+   * Formate un montant en devise
+   */
+  formatMontant(montant: number, devise: string = 'EUR'): string {
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: devise
+      }).format(montant || 0);
+    } catch (e) {
+      return `${montant || 0} ${devise}`;
+    }
+  }
+  /**
+   * Formate une date au format français
+   */
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  /**
+   * Formate une date et heure au format français
+   */
+  formatDateHeure(dateString: string): string {
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleString('fr-FR');
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  /**
+   * Calcule le nombre de jours avant échéance
+   */
+  calculerJoursAvantEcheance(dateEcheance: string): number {
+    if (!dateEcheance) return 0;
+
+    try {
+      const echeance = new Date(dateEcheance);
+      const maintenant = new Date();
+      const diffTime = echeance.getTime() - maintenant.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch (e) {
+      console.warn('⚠️ Erreur calcul jours avant échéance:', dateEcheance);
+      return 0;
+    }
+  }
+
+  /**
+   * Détermine si une facture est urgente
+   */
+  isFactureUrgente(dateEcheance: string, seuilJours: number = 5): boolean {
+    const jours = this.calculerJoursAvantEcheance(dateEcheance);
+    return jours <= seuilJours && jours >= 0;
+  }
+
+  /**
+   * Détermine si une facture est en retard
+   */
+  isFactureEnRetard(dateEcheance: string): boolean {
+    const jours = this.calculerJoursAvantEcheance(dateEcheance);
+    return jours < 0;
+  }
+
+  /**
+   * Génère une référence de paiement côté client (fallback)
+   */
+  genererReferencePaiementLocal(factureId: number): string {
+    const now = new Date();
+    const annee = now.getFullYear();
+    const mois = String(now.getMonth() + 1).padStart(2, '0');
+    const jour = String(now.getDate()).padStart(2, '0');
+    const heure = String(now.getHours()).padStart(2, '0');
+    const minute = String(now.getMinutes()).padStart(2, '0');
+
+    return `PAY${annee}${mois}${jour}${heure}${minute}-${factureId}`;
+  }
+
+  /**
+   * Valide les données de paiement
+   */
+  validerDonneesPaiement(paiementData: any): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!paiementData.referencePaiement || !paiementData.referencePaiement.trim()) {
+      errors.push('La référence de paiement est obligatoire');
+    }
+
+    if (paiementData.referencePaiement && paiementData.referencePaiement.length > 200) {
+      errors.push('La référence de paiement ne peut pas dépasser 200 caractères');
+    }
+
+    if (paiementData.commentaire && paiementData.commentaire.length > 500) {
+      errors.push('Le commentaire ne peut pas dépasser 500 caractères');
+    }
+
+    if (paiementData.datePaiement) {
+      try {
+        new Date(paiementData.datePaiement);
+      } catch (e) {
+        errors.push('Format de date de paiement invalide');
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
 }

@@ -331,17 +331,28 @@ public class FactureController {
     public ResponseEntity<List<Map<String, Object>>> getFacturesEnAttenteTresorerie(Authentication authentication) {
         try {
             Long userId = getCurrentUserId(authentication);
+            log.info("📋 Récupération factures trésorerie pour utilisateur {}", userId);
+
+            // Option 1: Factures spécifiquement assignées au trésorier
             List<Facture> factures = factureService.getFacturesEnAttenteTresorerie(userId);
+
+            // Option 2: Si aucune facture assignée, récupérer toutes les factures en attente trésorerie
+            if (factures.isEmpty()) {
+                factures = factureService.getToutesFacturesEnAttenteTresorerie();
+                log.info("📋 Aucune facture assignée, récupération de toutes les factures EN_TRESORERIE");
+            }
+
             List<Map<String, Object>> result = factureMapper.toListDtoList(factures);
 
-            log.debug("Récupération de {} factures en attente trésorerie pour l'utilisateur {}", result.size(), userId);
+            log.info("✅ {} factures en attente trésorerie récupérées", result.size());
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            log.error("Erreur lors de la récupération des factures en attente trésorerie", e);
+            log.error("❌ Erreur lors de la récupération des factures en attente trésorerie", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
         }
     }
+
 
     @PostMapping("/{id}/payer")
     @PreAuthorize("hasAuthority('ROLE_T1')")
@@ -352,25 +363,86 @@ public class FactureController {
 
         try {
             Long userId = getCurrentUserId(authentication);
-            log.info("Paiement de la facture {} par le trésorier {}", id, userId);
+            log.info("💰 Traitement paiement facture {} par trésorier {}", id, userId);
 
-            factureService.traiterParTresorier(id, userId,
+            // Validation des données de paiement
+            if (paiementDto.getReferencePaiement() == null || paiementDto.getReferencePaiement().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("La référence de paiement est obligatoire"));
+            }
+
+            // Préparer la date de paiement
+            String datePaiement = null;
+            if (paiementDto.getDatePaiement() != null) {
+                datePaiement = paiementDto.getDatePaiement().toString();
+            }
+
+            // Appeler le service avec les bons paramètres
+            factureService.traiterParTresorier(
+                    id,
+                    userId,
                     paiementDto.getReferencePaiement(),
-                    paiementDto.getDatePaiement(),
-                    paiementDto.getCommentaire());
+                    datePaiement,
+                    paiementDto.getCommentaire()
+            );
 
-            log.info("Facture {} payée avec succès - Référence: {}", id, paiementDto.getReferencePaiement());
+            log.info("✅ Facture {} payée avec succès - Référence: {}", id, paiementDto.getReferencePaiement());
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Facture payée avec succès"
+                    "message", "Facture payée avec succès",
+                    "factureId", id,
+                    "referencePaiement", paiementDto.getReferencePaiement()
             ));
 
         } catch (RuntimeException e) {
+            log.warn("⚠️ Erreur métier lors du paiement facture {}: {}", id, e.getMessage());
             return handleValidationException(e, id);
         } catch (Exception e) {
-            log.error("Erreur lors du paiement de la facture {}", id, e);
+            log.error("❌ Erreur technique lors du paiement de la facture {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    createErrorResponse("Erreur interne lors du paiement")
+                    createErrorResponse("Erreur interne lors du paiement: " + e.getMessage())
+            );
+        }
+    }
+// ===== ENDPOINT POUR GÉNÉRER UNE RÉFÉRENCE DE PAIEMENT =====
+
+    @GetMapping("/{id}/generer-reference-paiement")
+    @PreAuthorize("hasAuthority('ROLE_T1')")
+    public ResponseEntity<Map<String, Object>> genererReferencePaiement(@PathVariable Long id) {
+        try {
+            String reference = factureService.genererReferencePaiement(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "referencePaiement", reference,
+                    "factureId", id
+            ));
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la génération de référence de paiement pour facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur lors de la génération de la référence")
+            );
+        }
+    }
+// ===== ENDPOINT POUR VÉRIFIER SI UNE FACTURE PEUT ÊTRE TRAITÉE =====
+
+    @GetMapping("/{id}/peut-etre-payee")
+    @PreAuthorize("hasAuthority('ROLE_T1')")
+    public ResponseEntity<Map<String, Object>> peutEtrePayee(@PathVariable Long id, Authentication authentication) {
+        try {
+            Long userId = getCurrentUserId(authentication);
+            boolean peutEtreTraitee = factureService.peutEtreTraiteeParTresorier(id, userId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "peutEtreTraitee", peutEtreTraitee,
+                    "factureId", id
+            ));
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la vérification facture {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    createErrorResponse("Erreur lors de la vérification")
             );
         }
     }

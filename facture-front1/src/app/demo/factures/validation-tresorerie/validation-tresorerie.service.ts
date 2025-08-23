@@ -1,4 +1,4 @@
-// validation-tresorerie.service.ts
+/* validation-tresorerie.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
@@ -59,7 +59,7 @@ export class ValidationTresorerieService {
 
   /**
    * Récupère les factures en attente de traitement par la trésorerie
-   */
+
   getFacturesEnAttenteTresorerie(): Observable<Facture[]> {
     return this.http.get<Facture[]>(`${this.apiUrl}/en-attente-tresorerie`, {
       headers: this.getAuthHeaders()
@@ -75,7 +75,7 @@ export class ValidationTresorerieService {
 
   /**
    * Récupère une facture spécifique en attente de traitement
-   */
+
   getFactureEnAttenteById(id: number): Observable<Facture> {
     return this.http.get<any>(`${this.apiUrl}/${id}`, {
       headers: this.getAuthHeaders()
@@ -87,7 +87,7 @@ export class ValidationTresorerieService {
 
   /**
    * Recherche de factures avec filtres
-   */
+
   rechercherFactures(filtres: FiltresTresorerie): Observable<Facture[]> {
     let params = new HttpParams();
 
@@ -126,7 +126,7 @@ export class ValidationTresorerieService {
 
   /**
    * Traite le paiement d'une facture
-   */
+
   traiterPaiement(action: PaiementAction): Observable<any> {
     const paiementData = {
       referencePaiement: action.referencePaiement,
@@ -155,7 +155,7 @@ export class ValidationTresorerieService {
 
   /**
    * Traite plusieurs paiements en lot
-   */
+
   traiterPaiementsEnLot(factureIds: number[], referencePaiementBase: string, commentaire?: string): Observable<any> {
     const paiementLotData = {
       factureIds,
@@ -181,7 +181,7 @@ export class ValidationTresorerieService {
 
   /**
    * Marque une facture comme prioritaire
-   */
+
   marquerCommePrioritaire(factureId: number, prioritaire: boolean): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${factureId}/priorite`,
       { prioritaire },
@@ -202,7 +202,7 @@ export class ValidationTresorerieService {
 
   /**
    * Récupère les statistiques de la trésorerie
-   */
+
   getStatistiquesTresorerie(): Observable<TresorerieStats> {
     // Vérifier le cache
     const now = Date.now();
@@ -243,7 +243,7 @@ export class ValidationTresorerieService {
 
   /**
    * Récupère le tableau de bord de la trésorerie
-   */
+
   getTableauBordTresorerie(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/tableau-bord-tresorerie`, {
       headers: this.getAuthHeaders()
@@ -280,7 +280,7 @@ export class ValidationTresorerieService {
 
   /**
    * Exporte les factures en attente
-   */
+
   exporterFactures(format: 'csv' | 'excel' = 'csv'): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/export-tresorerie?format=${format}`, {
       headers: this.getAuthHeaders(),
@@ -292,7 +292,7 @@ export class ValidationTresorerieService {
 
   /**
    * Génère un rapport de trésorerie
-   */
+
   genererRapport(dateDebut: string, dateFin: string): Observable<any> {
     const params = new HttpParams()
       .set('dateDebut', dateDebut)
@@ -313,7 +313,7 @@ export class ValidationTresorerieService {
 
   /**
    * Récupère l'historique des paiements traités
-   */
+
   getHistoriquePaiements(limit: number = 50): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/historique-paiements?limit=${limit}`, {
       headers: this.getAuthHeaders()
@@ -329,7 +329,7 @@ export class ValidationTresorerieService {
 
   /**
    * Télécharge la pièce jointe d'une facture
-   */
+
   telechargerPieceJointe(factureId: number, nomFichier: string): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${factureId}/piece-jointe/${nomFichier}`, {
       headers: this.getAuthHeaders(),
@@ -346,14 +346,14 @@ export class ValidationTresorerieService {
 
   /**
    * Rafraîchit la liste des factures en attente
-   */
+
   refreshFacturesEnAttente(): void {
     this.getFacturesEnAttenteTresorerie().subscribe();
   }
 
   /**
    * Invalide le cache des statistiques
-   */
+
   private invalidateStatsCache(): void {
     this.statsCache = null;
     this.statsCacheTimestamp = 0;
@@ -361,7 +361,7 @@ export class ValidationTresorerieService {
 
   /**
    * Vérifie si une facture est urgente
-   */
+
   isFactureUrgente(facture: Facture): boolean {
     if (!facture.dateEcheance) return false;
 
@@ -375,7 +375,7 @@ export class ValidationTresorerieService {
 
   /**
    * Calcule le nombre de jours avant échéance
-   */
+
   getJoursAvantEcheance(facture: Facture): number {
     if (!facture.dateEcheance) return 999;
 
@@ -388,7 +388,7 @@ export class ValidationTresorerieService {
 
   /**
    * Génère une référence de paiement
-   */
+
   genererReferencePaiement(facture: Facture): string {
     const annee = new Date().getFullYear();
     const mois = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -454,3 +454,4 @@ export class ValidationTresorerieService {
     } else if (error.status === 404) {
       errorMessage = 'Ressource non trouvée';
     } else
+*/

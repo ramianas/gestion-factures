@@ -317,7 +317,8 @@
         <p><strong>Échéance:</strong> {{ formatDate(selectedFacture?.dateEcheance || '') }}</p>
       </div>
 
-      <form (ngSubmit)="traiterPaiement()" #paiementForm="ngForm">
+      <!-- CORRECTION : Utiliser un formulaire simple sans template reference -->
+      <form (ngSubmit)="traiterPaiement()">
         <div class="form-group">
           <label for="referencePaiement" class="required">Référence de paiement</label>
           <input
@@ -328,9 +329,9 @@
             [(ngModel)]="paiementForm.referencePaiement"
             name="referencePaiement"
             required
-            #refPaiement="ngModel"
           >
-          <div *ngIf="refPaiement.invalid && refPaiement.touched" class="error-message">
+          <!-- CORRECTION : Validation simple sans template reference -->
+          <div *ngIf="!paiementForm.referencePaiement?.trim() && processingPaiement" class="error-message">
             La référence de paiement est obligatoire
           </div>
         </div>
@@ -367,10 +368,11 @@
           >
             Annuler
           </button>
+          <!-- CORRECTION : Validation directe sur l'objet paiementForm -->
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="!paiementForm.referencePaiement.trim() || processingPaiement"
+            [disabled]="!isFormValid() || processingPaiement"
           >
             <span *ngIf="processingPaiement" class="spinner-small"></span>
             {{ processingPaiement ? 'Traitement...' : 'Valider le paiement' }}
@@ -380,7 +382,6 @@
     </div>
   </div>
 </div>
-
 <!-- Modal détails -->
 <div *ngIf="showDetailsModal && selectedFacture" class="modal-overlay" (click)="fermerModalDetails()">
   <div class="modal-content modal-large" (click)="$event.stopPropagation()">

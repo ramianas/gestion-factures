@@ -1,4 +1,6 @@
-// validation-tresorerie.component.ts
+// Fichier: facture-front1/src/app/demo/factures/validation-tresorerie/validation-tresorerie.component.ts
+// CORRECTIONS pour la validation trésorerie
+
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,6 +28,9 @@ interface FactureTresorerie {
   refCommande: string;
   statut: string;
   pieceJointeNom?: string;
+  // Champs pour les factures payées
+  datePaiement?: string;
+  referencePaiement?: string;
 }
 
 interface PaiementDto {
@@ -47,7 +52,7 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
 
   // État du composant
   facturesEnAttente: FactureTresorerie[] = [];
-  facturesTraitees: any[] = [];
+  facturesTraitees: FactureTresorerie[] = [];
   loading = true;
   activeTab = 'en-attente';
   selectedFacture: FactureTresorerie | null = null;
@@ -65,7 +70,7 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
     urgentesOnly: false
   };
 
-  // Formulaire de paiement
+  // Formulaire de paiement - CORRIGÉ
   paiementForm: PaiementDto = {
     referencePaiement: '',
     datePaiement: new Date().toISOString().split('T')[0],
@@ -95,110 +100,184 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ===== CHARGEMENT DES DONNÉES =====
+  // ===== CHARGEMENT DES DONNÉES - CORRIGÉ =====
 
   chargerFacturesEnAttente(): void {
     this.loading = true;
 
-    // Utilise l'endpoint existant: GET /api/factures/en-attente-tresorerie
+    // Utilise l'endpoint: GET /api/factures/en-attente-tresorerie
     this.factureService.getFacturesEnAttenteTresorerie()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (factures) => {
+        next: (response: any) => {
+          console.log('✅ Réponse backend factures trésorerie:', response);
+
+          // Vérifier le format de la réponse
+          let factures: any[] = [];
+          if (Array.isArray(response)) {
+            factures = response;
+          } else if (response && response.data && Array.isArray(response.data)) {
+            factures = response.data;
+          } else if (response && typeof response === 'object') {
+            // Si c'est un objet unique, le mettre dans un tableau
+            factures = [response];
+          }
+
           this.facturesEnAttente = factures.map(f => this.mapToFactureTresorerie(f));
           this.calculerStatistiques();
           this.loading = false;
+
+          console.log(`✅ ${this.facturesEnAttente.length} factures en attente chargées`);
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des factures en attente:', error);
+          console.error('❌ Erreur lors du chargement des factures en attente:', error);
           this.loading = false;
-          // En cas d'erreur, afficher un message ou des données de test
+
+          // En cas d'erreur, charger des données de test
           this.loadTestData();
+
+          // Afficher un message d'erreur à l'utilisateur
+          alert('Erreur lors du chargement des factures. Données de test affichées.');
         }
       });
   }
 
   chargerFacturesTraitees(): void {
-    // Récupérer les factures récemment payées pour l'historique
+    // Récupérer les factures payées
     this.factureService.getFacturesParStatut('PAYEE')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (factures) => {
+        next: (response: any) => {
+          console.log('✅ Réponse factures payées:', response);
+
+          let factures: any[] = [];
+          if (Array.isArray(response)) {
+            factures = response;
+          } else if (response && response.data && Array.isArray(response.data)) {
+            factures = response.data;
+          }
+
           // Prendre les 20 dernières factures payées
-          this.facturesTraitees = factures.slice(0, 20);
+          this.facturesTraitees = factures
+            .slice(0, 20)
+            .map(f => this.mapToFactureTresorerie(f));
+
           this.calculerStatistiques();
+          console.log(`✅ ${this.facturesTraitees.length} factures traitées chargées`);
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des factures traitées:', error);
+          console.error('❌ Erreur lors du chargement des factures traitées:', error);
+          this.facturesTraitees = [];
         }
       });
   }
 
+  // ===== MAPPING DES DONNÉES - AMÉLIORÉ =====
+
   private mapToFactureTresorerie(facture: any): FactureTresorerie {
+    console.log('🔄 Mapping facture:', facture);
+
     return {
-      id: facture.id,
+      id: facture.id || 0,
       numero: facture.numero || '',
       nomFournisseur: facture.nomFournisseur || '',
-      montantTTC: facture.montantTTC || 0,
-      montantHT: facture.montantHT || 0,
+      montantTTC: this.parseNumber(facture.montantTTC),
+      montantHT: this.parseNumber(facture.montantHT),
       dateFacture: facture.dateFacture || '',
       dateEcheance: facture.dateEcheance || '',
       dateValidationV2: facture.dateValidationV2 || '',
-      createurNom: facture.createurNom || '',
-      validateur1Nom: facture.validateur1Nom || '',
-      validateur2Nom: facture.validateur2Nom || '',
-      joursAvantEcheance: facture.joursAvantEcheance || 0,
-      urgent: facture.urgent || facture.joursAvantEcheance <= 5,
+      createurNom: facture.createurNom || this.extractUserName(facture.createur),
+      validateur1Nom: facture.validateur1Nom || this.extractUserName(facture.validateur1),
+      validateur2Nom: facture.validateur2Nom || this.extractUserName(facture.validateur2),
+      joursAvantEcheance: this.calculateJoursAvantEcheance(facture.dateEcheance),
+      urgent: facture.urgent || this.isUrgent(facture.dateEcheance),
       designation: facture.designation || '',
       refCommande: facture.refCommande || '',
       statut: facture.statut || '',
-      pieceJointeNom: facture.pieceJointeNom
+      pieceJointeNom: facture.pieceJointeNom,
+      // Champs pour factures payées
+      datePaiement: facture.datePaiement,
+      referencePaiement: facture.referencePaiement
     };
   }
 
-  private calculerStatistiques(): void {
-    this.statistiques = {
-      enAttente: this.facturesEnAttente.length,
-      urgent: this.facturesEnAttente.filter(f => f.urgent || f.joursAvantEcheance <= 5).length,
-      montantTotal: this.facturesEnAttente.reduce((sum, f) => sum + f.montantTTC, 0),
-      traitees: this.facturesTraitees.length
-    };
+  private parseNumber(value: any): number {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
   }
 
-  // ===== ACTIONS PRINCIPALES =====
+  private extractUserName(user: any): string {
+    if (!user) return '';
+    if (typeof user === 'string') return user;
+    if (user.nomComplet) return user.nomComplet;
+    if (user.nom && user.prenom) return `${user.prenom} ${user.nom}`;
+    if (user.nom) return user.nom;
+    return '';
+  }
+
+  private calculateJoursAvantEcheance(dateEcheance: string): number {
+    if (!dateEcheance) return 0;
+
+    try {
+      const echeance = new Date(dateEcheance);
+      const aujourd_hui = new Date();
+      const diffTime = echeance.getTime() - aujourd_hui.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch (e) {
+      console.warn('⚠️ Erreur parsing date échéance:', dateEcheance);
+      return 0;
+    }
+  }
+
+  private isUrgent(dateEcheance: string): boolean {
+    const jours = this.calculateJoursAvantEcheance(dateEcheance);
+    return jours <= 5 && jours >= 0;
+  }
+
+  // ===== TRAITEMENT DU PAIEMENT - CORRIGÉ =====
 
   traiterPaiement(): void {
     if (!this.selectedFacture || this.processingPaiement) {
       return;
     }
 
-    if (!this.paiementForm.referencePaiement.trim()) {
-      alert('La référence de paiement est obligatoire');
+    // Validation avec la nouvelle méthode
+    const validation = this.validatePaiementForm();
+    if (!validation.valid) {
+      this.showValidationErrors();
       return;
     }
 
     this.processingPaiement = true;
+    console.log('💰 Traitement paiement:', this.paiementForm);
+
+    // Préparer les données pour l'API
+    const paiementData = {
+      referencePaiement: this.paiementForm.referencePaiement.trim(),
+      datePaiement: this.paiementForm.datePaiement || new Date().toISOString().split('T')[0],
+      commentaire: this.paiementForm.commentaire || ''
+    };
 
     // Appel de l'endpoint: POST /api/factures/{id}/payer
-    this.factureService.traiterParTresorier(
-      this.selectedFacture.id,
-      this.paiementForm.referencePaiement,
-      this.paiementForm.datePaiement,
-      this.paiementForm.commentaire
-    )
+    this.factureService.traiterParTresorier(this.selectedFacture.id, paiementData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Paiement traité avec succès:', response);
+          console.log('✅ Paiement traité avec succès:', response);
 
           // Retirer la facture de la liste en attente
           this.facturesEnAttente = this.facturesEnAttente.filter(f => f.id !== this.selectedFacture!.id);
 
           // Ajouter aux factures traitées
-          const factureTraitee = {
-            ...this.selectedFacture,
-            datePaiement: this.paiementForm.datePaiement,
-            referencePaiement: this.paiementForm.referencePaiement,
+          const factureTraitee: FactureTresorerie = {
+            ...this.selectedFacture!,
+            datePaiement: paiementData.datePaiement,
+            referencePaiement: paiementData.referencePaiement,
             statut: 'PAYEE'
           };
           this.facturesTraitees.unshift(factureTraitee);
@@ -210,14 +289,21 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
           alert('Paiement traité avec succès !');
         },
         error: (error) => {
-          console.error('Erreur lors du traitement du paiement:', error);
-          alert('Erreur lors du traitement du paiement: ' + (error.message || 'Erreur inconnue'));
+          console.error('❌ Erreur lors du traitement du paiement:', error);
+
+          let message = 'Erreur lors du traitement du paiement';
+          if (error?.error?.message) {
+            message = error.error.message;
+          } else if (error?.message) {
+            message = error.message;
+          }
+
+          alert(message);
           this.processingPaiement = false;
         }
-      });
-  }
+      });}
 
-  // ===== GESTION DES MODALES =====
+  // ===== GESTION DES MODALES - AMÉLIORÉE =====
 
   ouvrirModalPaiement(facture: FactureTresorerie): void {
     this.selectedFacture = facture;
@@ -227,11 +313,13 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
       commentaire: ''
     };
     this.showPaiementModal = true;
+    console.log('💳 Modal paiement ouverte pour facture:', facture.numero);
   }
 
   ouvrirModalDetails(facture: FactureTresorerie): void {
     this.selectedFacture = facture;
     this.showDetailsModal = true;
+    console.log('👁️ Modal détails ouverte pour facture:', facture.numero);
   }
 
   resetPaiementModal(): void {
@@ -248,6 +336,27 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
   fermerModalDetails(): void {
     this.showDetailsModal = false;
     this.selectedFacture = null;
+  }
+
+  // ===== GÉNÉRATION RÉFÉRENCE DE PAIEMENT =====
+
+  private genererReferencePaiement(facture: FactureTresorerie): string {
+    const now = new Date();
+    const annee = now.getFullYear();
+    const mois = String(now.getMonth() + 1).padStart(2, '0');
+    const jour = String(now.getDate()).padStart(2, '0');
+    return `PAY${annee}${mois}${jour}-${facture.id}`;
+  }
+
+  // ===== STATISTIQUES =====
+
+  private calculerStatistiques(): void {
+    this.statistiques = {
+      enAttente: this.facturesEnAttente.length,
+      urgent: this.facturesEnAttente.filter(f => f.urgent || f.joursAvantEcheance <= 5).length,
+      montantTotal: this.facturesEnAttente.reduce((sum, f) => sum + f.montantTTC, 0),
+      traitees: this.facturesTraitees.length
+    };
   }
 
   // ===== FILTRAGE =====
@@ -283,13 +392,6 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
 
   // ===== MÉTHODES UTILITAIRES =====
 
-  private genererReferencePaiement(facture: FactureTresorerie): string {
-    const annee = new Date().getFullYear();
-    const mois = String(new Date().getMonth() + 1).padStart(2, '0');
-    const jour = String(new Date().getDate()).padStart(2, '0');
-    return `PAY${annee}${mois}${jour}-${facture.id}`;
-  }
-
   getStatutBadgeClass(urgent: boolean, joursAvantEcheance: number): string {
     if (urgent || joursAvantEcheance <= 5) {
       return 'badge-urgent';
@@ -312,20 +414,36 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'EUR'
-    }).format(montant);
+    }).format(montant || 0);
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch (e) {
+      return dateString;
+    }
   }
 
   formatDateHeure(dateString: string): string {
-    return new Date(dateString).toLocaleString('fr-FR');
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleString('fr-FR');
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  trackByFactureId(index: number, facture: FactureTresorerie): number {
+    return facture.id;
   }
 
   // ===== DONNÉES DE TEST (fallback) =====
 
   private loadTestData(): void {
+    console.log('⚠️ Chargement des données de test pour la trésorerie');
+
     this.facturesEnAttente = [
       {
         id: 1,
@@ -371,31 +489,104 @@ export class ValidationTresorerieComponent implements OnInit, OnDestroy {
         numero: 'FACT2024304',
         nomFournisseur: 'TOTAL MAROC',
         montantTTC: 12600.00,
+        montantHT: 10500.00,
+        dateFacture: '2024-01-05',
+        dateEcheance: '2024-01-20',
+        dateValidationV2: '2024-01-15T10:00:00',
+        createurNom: 'Ahmed Benali',
+        validateur1Nom: 'Sophie Leroy',
+        validateur2Nom: 'Claire Petit',
+        joursAvantEcheance: 0,
+        urgent: false,
+        designation: 'Carburant véhicules service',
+        refCommande: 'CMD2024-304',
+        statut: 'PAYEE',
         datePaiement: '2024-01-20',
-        referencePaiement: 'PAY20240120-304',
-        statut: 'PAYEE'
+        referencePaiement: 'PAY20240120-304'
       }
     ];
 
     this.calculerStatistiques();
+    this.loading = false;
   }
 
   // ===== ACTIONS ADDITIONNELLES =====
 
   exporterFactures(): void {
-    // Fonctionnalité d'export (CSV, Excel, etc.)
-    console.log('Export des factures en attente');
-  }
-
-  imprimerFacture(facture: FactureTresorerie): void {
-    // Fonctionnalité d'impression
-    console.log('Impression de la facture:', facture.numero);
+    console.log('📊 Export des factures en attente');
+    // TODO: Implémenter l'export
+    alert('Fonctionnalité d\'export à implémenter');
   }
 
   voirPieceJointe(facture: FactureTresorerie): void {
     if (facture.pieceJointeNom) {
-      // Ouvrir la pièce jointe
-      console.log('Ouverture de la pièce jointe:', facture.pieceJointeNom);
+      console.log('📎 Ouverture de la pièce jointe:', facture.pieceJointeNom);
+      // TODO: Implémenter l'ouverture de pièce jointe
+      alert('Ouverture de pièce jointe: ' + facture.pieceJointeNom);
+    }
+  }
+  /**
+   * Vérifie si le formulaire de paiement est valide
+   */
+  isFormValid(): boolean {
+    return !!(
+      this.paiementForm.referencePaiement &&
+      this.paiementForm.referencePaiement.trim().length > 0
+    );
+  }
+  /**
+   * Validation avancée du formulaire (optionnelle)
+   */
+  validatePaiementForm(): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Référence de paiement obligatoire
+    if (!this.paiementForm.referencePaiement || !this.paiementForm.referencePaiement.trim()) {
+      errors.push('La référence de paiement est obligatoire');
+    }
+
+    // Longueur maximale de la référence
+    if (this.paiementForm.referencePaiement && this.paiementForm.referencePaiement.length > 200) {
+      errors.push('La référence de paiement ne peut pas dépasser 200 caractères');
+    }
+
+    // Longueur maximale du commentaire
+    if (this.paiementForm.commentaire && this.paiementForm.commentaire.length > 500) {
+      errors.push('Le commentaire ne peut pas dépasser 500 caractères');
+    }
+
+    // Validation de la date
+    if (this.paiementForm.datePaiement) {
+      try {
+        const date = new Date(this.paiementForm.datePaiement);
+        if (isNaN(date.getTime())) {
+          errors.push('Format de date invalide');
+        }
+
+        // La date ne peut pas être dans le futur (plus de 1 jour)
+        const demain = new Date();
+        demain.setDate(demain.getDate() + 1);
+        if (date > demain) {
+          errors.push('La date de paiement ne peut pas être dans le futur');
+        }
+      } catch (e) {
+        errors.push('Format de date invalide');
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+  /**
+   * Affiche les erreurs de validation (optionnel)
+   */
+  showValidationErrors(): void {
+    const validation = this.validatePaiementForm();
+    if (!validation.valid) {
+      const message = 'Erreurs de validation:\n' + validation.errors.join('\n');
+      alert(message);
     }
   }
 }

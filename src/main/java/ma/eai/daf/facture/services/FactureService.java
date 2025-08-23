@@ -50,26 +50,18 @@ public class FactureService {
             throw new RuntimeException("Seuls les utilisateurs U1 peuvent créer des factures");
         }
 
-        // Validation des validateurs
         validateValidateurs(facture);
-
-
         facture.setCreateur(createur);
         facture.setStatut(StatutFacture.SAISIE);
 
         Facture savedFacture = factureRepository.saveAndFlush(facture);
 
-        // Génération automatique du numéro si pas fourni
         if (facture.getNumero() == null || facture.getNumero().trim().isEmpty()) {
             facture.setNumero(generateNumeroFacture(savedFacture.getId()));
         }
 
         factureRepository.save(facture);
-
-        log.info("Nouvelle facture créée: {} par {}", savedFacture.getNumero(), createur.getNomComplet());
-
-        // Envoyer notification V1 après 24h (à implémenter avec un scheduler)
-        // notificationService.scheduleNotificationV1(savedFacture);
+        log.info("✅ Nouvelle facture créée: {} par {}", savedFacture.getNumero(), createur.getNomComplet());
 
         return savedFacture;
     }
@@ -266,7 +258,9 @@ public class FactureService {
     }
 
     public Facture traiterParTresorier(Long factureId, Long tresorierIdId, String referencePaiement,
-                                       LocalDate datePaiement, String commentaire) {
+                                       String datePaiement, String commentaire) {
+        log.info("🏦 Traitement trésorerie - Facture {} par trésorier {}", factureId, tresorierIdId);
+
         Facture facture = factureRepository.findById(factureId)
                 .orElseThrow(() -> new RuntimeException("Facture non trouvée"));
 
@@ -281,27 +275,48 @@ public class FactureService {
             throw new RuntimeException("La facture ne peut pas être traitée par la trésorerie dans son état actuel");
         }
 
+        // Vérifier que le trésorier est bien celui assigné (optionnel selon votre logique)
+        if (facture.getTresorier() != null && !facture.getTresorier().getId().equals(tresorierIdId)) {
+            log.warn("⚠️ Trésorier différent de celui assigné, mais traitement autorisé");
+        }
+
         StatutFacture ancienStatut = facture.getStatut();
 
+        // Mettre à jour la facture
         facture.setStatut(StatutFacture.PAYEE);
         facture.setReferencePaiement(referencePaiement);
-        facture.setDatePaiement(datePaiement != null ? datePaiement : LocalDate.now());
-        facture.setTresorier(tresorier);
+
+        // Parser la date si fournie, sinon date actuelle
+        LocalDate dateParseePaiement = LocalDate.now();
+        if (datePaiement != null && !datePaiement.trim().isEmpty()) {
+            try {
+                dateParseePaiement = LocalDate.parse(datePaiement);
+            } catch (Exception e) {
+                log.warn("⚠️ Format de date invalide: {}, utilisation date actuelle", datePaiement);
+            }
+        }
+        facture.setDatePaiement(dateParseePaiement);
+
+        // Assigner le trésorier si pas déjà fait
+        if (facture.getTresorier() == null) {
+            facture.setTresorier(tresorier);
+        }
 
         Facture savedFacture = factureRepository.save(facture);
 
         // Créer trace de validation
         createValidationTrace(facture, tresorier, ancienStatut, StatutFacture.PAYEE,
-                commentaire, true, "T1");
+                commentaire != null ? commentaire : "Paiement traité", true, "T1");
 
         // Notification au créateur et validateurs
         notificationService.notifierPaiement(facture);
 
-        log.info("Facture {} payée par trésorier {} - Référence: {}",
+        log.info("✅ Facture {} payée par trésorier {} - Référence: {}",
                 facture.getNumero(), tresorier.getNomComplet(), referencePaiement);
 
         return savedFacture;
     }
+
 
     // ===== RECHERCHES SPÉCIALISÉES =====
 
@@ -323,10 +338,43 @@ public class FactureService {
         return factureRepository.findFacturesEnAttenteV2(validateur);
     }
 
+    /**
+     * Récupère les factures en attente pour un trésorier spécifique
+     */
     public List<Facture> getFacturesEnAttenteTresorerie(Long tresorierIdId) {
-        User tresorier = userRepository.findById(tresorierIdId)
-                .orElseThrow(() -> new RuntimeException("Trésorier non trouvé"));
-        return factureRepository.findFacturesEnAttenteTresorerie(tresorier);
+        try {
+            User tresorier = userRepository.findById(tresorierIdId)
+                    .orElseThrow(() -> new RuntimeException("Trésorier non trouvé"));
+
+            // Option 1: Factures assignées à ce trésorier spécifiquement
+            List<Facture> facturesAssignees = factureRepository.findFacturesEnAttenteTresorerie(tresorier);
+
+            // Option 2: Si pas d'assignation spécifique, toutes les factures en attente trésorerie
+            if (facturesAssignees.isEmpty()) {
+                facturesAssignees = factureRepository.findByStatutOrderByDateCreationDesc(StatutFacture.EN_TRESORERIE);
+                log.info("📋 Aucune facture assignée spécifiquement, retour de toutes les factures EN_TRESORERIE");
+            }
+
+            log.debug("📋 {} factures en attente trésorerie pour {}", facturesAssignees.size(), tresorier.getNomComplet());
+            return facturesAssignees;
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération des factures en attente trésorerie", e);
+            throw new RuntimeException("Erreur lors de la récupération des factures: " + e.getMessage());
+        }
+    }
+    /**
+     * Récupère toutes les factures en attente trésorerie (sans filtre par trésorier)
+     */
+    public List<Facture> getToutesFacturesEnAttenteTresorerie() {
+        try {
+            List<Facture> factures = factureRepository.findByStatutOrderByDateCreationDesc(StatutFacture.EN_TRESORERIE);
+            log.debug("📋 {} factures en attente trésorerie au total", factures.size());
+            return factures;
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération de toutes les factures en attente trésorerie", e);
+            throw new RuntimeException("Erreur lors de la récupération des factures: " + e.getMessage());
+        }
     }
 
     public List<Facture> getFacturesEnAttenteForUser(Long userId) {
@@ -345,8 +393,18 @@ public class FactureService {
         return factureRepository.findFacturesEnRetard(LocalDate.now());
     }
 
+    /**
+     * Récupère les factures par statut avec tri par date de création
+     */
     public List<Facture> getFacturesParStatut(StatutFacture statut) {
-        return factureRepository.findByStatutOrderByDateCreationDesc(statut);
+        try {
+            List<Facture> factures = factureRepository.findByStatutOrderByDateCreationDesc(statut);
+            log.debug("📋 {} factures trouvées avec statut {}", factures.size(), statut);
+            return factures;
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération des factures par statut {}", statut, e);
+            throw new RuntimeException("Erreur lors de la récupération des factures: " + e.getMessage());
+        }
     }
 
     // ===== MÉTHODES UTILITAIRES PRIVÉES =====
@@ -371,9 +429,10 @@ public class FactureService {
     }
 
     private String generateNumeroFacture(Long idFacture) {
-        String prefix = "FACT" + LocalDate.now().getYear() + LocalDate.now().getMonthValue() + LocalDate.now().getDayOfMonth();
-
-        return prefix + idFacture;
+        String prefix = "FACT" + LocalDate.now().getYear() +
+                String.format("%02d", LocalDate.now().getMonthValue()) +
+                String.format("%02d", LocalDate.now().getDayOfMonth());
+        return prefix + "-" + String.format("%05d", idFacture);
     }
 
     private User assignerTresorierAutomatiquement() {
@@ -395,24 +454,39 @@ public class FactureService {
     private void createValidationTrace(Facture facture, User utilisateur, StatutFacture statutPrecedent,
                                        StatutFacture statutNouveau, String commentaire, boolean approuve,
                                        String niveauValidation) {
-        ValidationFacture validation = ValidationFacture.builder()
-                .facture(facture)
-                .utilisateur(utilisateur)
-                .statutPrecedent(statutPrecedent)
-                .statutNouveau(statutNouveau)
-                .commentaire(commentaire)
-                .approuve(approuve)
-                .niveauValidation(niveauValidation)
-                .build();
+        try {
+            ValidationFacture validation = ValidationFacture.builder()
+                    .facture(facture)
+                    .utilisateur(utilisateur)
+                    .statutPrecedent(statutPrecedent)
+                    .statutNouveau(statutNouveau)
+                    .commentaire(commentaire)
+                    .approuve(approuve)
+                    .niveauValidation(niveauValidation)
+                    .build();
 
-        validationRepository.save(validation);
+            validationRepository.save(validation);
+            log.debug("📝 Trace de validation créée: {} -> {}", statutPrecedent, statutNouveau);
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la création de la trace de validation", e);
+            // Ne pas faire échouer la transaction principale
+        }
     }
 
     // ===== STATISTIQUES =====
 
     public long countFacturesParStatut(StatutFacture statut) {
-        return factureRepository.countByStatut(statut);
+        try {
+            long count = factureRepository.countByStatut(statut);
+            log.debug("📊 {} factures avec statut {}", count, statut);
+            return count;
+        } catch (Exception e) {
+            log.error("❌ Erreur lors du comptage des factures par statut {}", statut, e);
+            return 0;
+        }
     }
+
 
     public Object[] getStatistiquesFacturesParCreateur(Long createurId) {
         User createur = userRepository.findById(createurId)
@@ -431,4 +505,43 @@ public class FactureService {
     public List<Object[]> getPerformanceValidateursV2() {
         return factureRepository.getPerformanceValidateursV2();
     }
+    /**
+     * Valide qu'une facture peut être traitée par un trésorier
+     */
+    public boolean peutEtreTraiteeParTresorier(Long factureId, Long tresorierIdId) {
+        try {
+            Optional<Facture> factureOpt = factureRepository.findById(factureId);
+            Optional<User> tresorierOpt = userRepository.findById(tresorierIdId);
+
+            if (factureOpt.isEmpty() || tresorierOpt.isEmpty()) {
+                return false;
+            }
+
+            Facture facture = factureOpt.get();
+            User tresorier = tresorierOpt.get();
+
+            return facture.peutEtreTraiteeParTresorier() && tresorier.isTresorier();
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la validation de traitement trésorerie", e);
+            return false;
+        }
+    }
+    /**
+     * Génère une référence de paiement automatique
+     */
+    public String genererReferencePaiement(Long factureId) {
+        try {
+            String annee = String.valueOf(LocalDate.now().getYear());
+            String mois = String.format("%02d", LocalDate.now().getMonthValue());
+            String jour = String.format("%02d", LocalDate.now().getDayOfMonth());
+
+            return String.format("PAY%s%s%s-%d", annee, mois, jour, factureId);
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la génération de référence de paiement", e);
+            return "PAY" + System.currentTimeMillis();
+        }
+    }
+
 }

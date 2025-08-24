@@ -46,15 +46,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(authz -> authz
-                        // ===== ENDPOINTS PUBLICS (ORDRE IMPORTANT : PLUS SPÉCIFIQUE D'ABORD) =====
+                        // ===== ENDPOINTS PUBLICS =====
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ===== ENDPOINTS DE TEST (à supprimer en production) =====
-                        .requestMatchers("/api/factures/test/**").permitAll()
-                        .requestMatchers("/api/factures/**/test").permitAll()
-                        .requestMatchers("/api/factures/**-test").permitAll()
+                        // ===== ENDPOINTS DE TEST =====
                         .requestMatchers("/api/test/**").permitAll()
 
                         // ===== SWAGGER / API DOCS =====
@@ -63,25 +60,30 @@ public class SecurityConfig {
                         // ===== ENDPOINTS ADMIN UNIQUEMENT =====
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
+                        // ===== ENDPOINTS SIMPLE (LECTURE GÉNÉRALE) =====
+                        .requestMatchers(HttpMethod.GET, "/api/simple/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
+
                         // ===== ENDPOINTS FACTURES PAR RÔLE =====
                         // Création et modification de factures (U1 uniquement)
                         .requestMatchers(HttpMethod.POST, "/api/factures").hasRole("U1")
                         .requestMatchers(HttpMethod.PUT, "/api/factures/**").hasRole("U1")
                         .requestMatchers(HttpMethod.DELETE, "/api/factures/**").hasRole("U1")
                         .requestMatchers("/api/factures/mes-factures").hasRole("U1")
-                        .requestMatchers("/api/factures/**/soumettre-v1").hasRole("U1")
+                        .requestMatchers("/api/factures/*/soumettre-v1").hasRole("U1")
 
                         // Validation V1 (V1 uniquement)
                         .requestMatchers("/api/factures/en-attente-v1").hasRole("V1")
-                        .requestMatchers("/api/factures/**/valider-v1").hasRole("V1")
+                        .requestMatchers("/api/factures/*/valider-v1").hasRole("V1")
 
                         // Validation V2 (V2 uniquement)
                         .requestMatchers("/api/factures/en-attente-v2").hasRole("V2")
-                        .requestMatchers("/api/factures/**/valider-v2").hasRole("V2")
+                        .requestMatchers("/api/factures/*/valider-v2").hasRole("V2")
 
                         // Trésorerie (T1 uniquement)
                         .requestMatchers("/api/factures/en-attente-tresorerie").hasRole("T1")
-                        .requestMatchers("/api/factures/**/payer").hasRole("T1")
+                        .requestMatchers("/api/factures/*/payer").hasRole("T1")
+                        .requestMatchers("/api/factures/*/generer-reference-paiement").hasRole("T1")
+                        .requestMatchers("/api/factures/*/peut-etre-payee").hasRole("T1")
 
                         // Consultation générale (tous les rôles connectés)
                         .requestMatchers(HttpMethod.GET, "/api/factures/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
@@ -102,7 +104,7 @@ public class SecurityConfig {
                         // ===== ENDPOINTS NOTIFICATIONS =====
                         .requestMatchers("/api/notifications/**").hasAnyRole("U1", "V1", "V2", "T1", "ADMIN")
 
-                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION (DOIT ÊTRE EN DERNIER) =====
+                        // ===== TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION =====
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
